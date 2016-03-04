@@ -34,6 +34,9 @@ public class MainActivity extends AppCompatActivity {
     // declare the dialog as a member field of your activity
     ProgressDialog mProgressDialog;
 
+    String filename;
+    String url;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -47,7 +50,7 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View view) {
                 // execute this when the downloader must be fired
                 final DownloadTask downloadTask = new DownloadTask(MainActivity.this);
-                downloadTask.execute("http://172.31.212.116/cat.gif");
+                downloadTask.execute("http://www.csc.kth.se/~lando/288892_1895438431765_6501997_o.jpg");
 
                 mProgressDialog.setOnCancelListener(new DialogInterface.OnCancelListener() {
                     @Override
@@ -102,7 +105,7 @@ public class MainActivity extends AppCompatActivity {
                 // download the file
                 input = connection.getInputStream();
                 if (isExternalStorageWritable()) {
-                    File file = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), "cat.gif");
+                    File file = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "cat.jpg");
                     output = new FileOutputStream(file);
                 }
                 byte data[] = new byte[4096];
