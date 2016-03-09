@@ -72,7 +72,7 @@ public class MainActivity extends AppCompatActivity {
 
     // usually, subclasses of AsyncTask are declared inside the activity class.
 // that way, you can easily modify the UI thread from here
-    private class DownloadTask extends ask<String, Integer, String> {
+    private class DownloadTask extends AsyncTask<String, Integer, String> {
 
         private Context context;
         private PowerManager.WakeLock mWakeLock;
@@ -168,6 +168,7 @@ public class MainActivity extends AppCompatActivity {
             mProgressDialog.setProgress(progress[0]);
         }
 
+        @Override
         protected void onPostExecute(String result) {
             mWakeLock.release();
             mProgressDialog.dismiss();
@@ -195,12 +196,12 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
-        MenuInflater().inflate(R.menu.menu_main, menu);
+        getMenuInflater().inflate(R.menu.menu_main, menu);
         return true;
-        }
+    }
 
-@Override
-public boolean onOptionsItemSelected(MenuItem item) {
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
         // Handle action bar item clicks here. The action bar will
         // automatically handle clicks on the Home/Up button, so long
         // as you specify a parent activity in AndroidManifest.xml.
@@ -208,9 +209,9 @@ public boolean onOptionsItemSelected(MenuItem item) {
 
         //noinspection SimplifiableIfStatement
         if (id == R.id.action_settings) {
-        return true;
+            return true;
         }
 
         return super.onOptionsItemSelected(item);
-        }
-        }
+    }
+}
