@@ -5,20 +5,36 @@ package acme.bnss.tsftp;
  */
 public class UploadResult {
 
+    private boolean successfull;
+    private String message;
+    private String fileID;
+
     public UploadResult() {
 
     }
 
+    public UploadResult(String fileID) {
+        this.fileID = fileID;
+        successfull = true;
+    }
+
     public boolean wasSuccessfull() {
-        return true;
+        return successfull;
     }
 
     public String getMessage() {
-        return null;
+        return message;
     }
 
     public String getFileID() {
-        return null;
+        return fileID;
+    }
+
+    public static UploadResult failure(String message) {
+        UploadResult result = new UploadResult();
+        result.successfull = false;
+        result.message = message;
+        return result;
     }
 
 }

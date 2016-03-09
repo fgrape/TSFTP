@@ -13,7 +13,7 @@
     <EditText
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:id="@+id/fileIDFeild"
+        android:id="@+id/fileIDField"
         android:layout_marginTop="40dp"
         android:layout_below="@+id/fileID"
         android:layout_alignParentStart="true"
@@ -32,7 +32,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Download"
-        android:id="@+id/downLoadButton"
+        android:id="@+id/downloadButton"
         android:layout_alignParentBottom="true"
         android:layout_alignParentStart="true"
         android:layout_alignParentEnd="true"

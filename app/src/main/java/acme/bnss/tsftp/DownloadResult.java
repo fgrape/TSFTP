@@ -5,4 +5,8 @@ package acme.bnss.tsftp;
  */
 public class DownloadResult {
 
+    public boolean wasSuccessfull() {
+        return true;
+    }
+
 }

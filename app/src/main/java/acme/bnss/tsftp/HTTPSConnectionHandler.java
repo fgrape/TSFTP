@@ -7,8 +7,8 @@ import javax.net.ssl.HttpsURLConnection;
  */
 public class HTTPSConnectionHandler {
 
-    public HttpsURLConnection getConnectionToACMEWebServer() {
-        
+    public static HttpsURLConnection getConnectionToACMEWebServer(String file) {
+        // TODO Implement.
         return null;
     }
 
