@@ -105,7 +105,7 @@ public class MainActivity extends AppCompatActivity {
                 // download the file
                 input = connection.getInputStream();
                 if (isExternalStorageWritable()) {
-                    File file = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "cat.jpg");
+                    File file = new File(Environment.getExternalStoragePublicDirectory("TSFTP/Downloads"), "cat.jpg");
                     output = new FileOutputStream(file);
                 }
                 byte data[] = new byte[4096];

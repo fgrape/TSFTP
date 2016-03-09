@@ -9,4 +9,13 @@ public class DownloadHandler {
 
     }
 
+    public DownloadResult downloadFile(String fileID) {
+
+        return null;
+    }
+
+    public void deleteFile(String fileID) {
+
+    }
+
 }
