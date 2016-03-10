@@ -49,8 +49,8 @@ public class UploadActivity extends AppCompatActivity {
                 EditText emailET = (EditText)findViewById(R.id.receiverEmailField);
                 String email = emailET.getText().toString();
 
-                EditText fileET = (EditText)findViewById(R.id.fileIDField);
-                String fileString = "" + fileET.getText().toString();
+                EditText fileET = (EditText)findViewById(R.id.fileField);
+                String fileString = fileET.getText().toString();
                 if (isExternalStorageWritable()) {
                     File file = new File(Environment.getExternalStoragePublicDirectory("TSFTP"), fileString);
                     uploadTask.execute(new EmailFileTuple(email, file));
@@ -100,13 +100,16 @@ public class UploadActivity extends AppCompatActivity {
         protected Void doInBackground(EmailFileTuple... params) {
             String email = params[0].getEmail();
             File file  = params[0].getFile();
-            UploadResult result = handler.uploadFile(email, file, progressDialog);
+            final UploadResult result = handler.uploadFile(email, file, progressDialog);
             if (!result.wasSuccessful()){
-                Context context = getApplicationContext();
-                CharSequence text = "Didn't work yo check this error: " + result.getMessage();
-                int duration = Toast.LENGTH_LONG;
-                Toast toast = Toast.makeText(context, text, duration);
-                toast.show();
+                runOnUiThread(new Runnable() {
+                    public void run() {
+                        CharSequence text = "Didn't work yo check this error: " + result.getMessage();
+                        int duration = Toast.LENGTH_LONG;
+                        Toast toast = Toast.makeText(UploadActivity.this, text, duration);
+                        toast.show();
+                    }
+                });
             }
             final String fileLink = result.getFileDescriptor().getFileLink();
             String server = result.getFileDescriptor().getServer();
