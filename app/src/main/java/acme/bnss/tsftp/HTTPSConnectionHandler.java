@@ -1,5 +1,7 @@
 package acme.bnss.tsftp;
 
+import android.util.Log;
+
 import java.net.URL;
 
 import javax.net.ssl.HttpsURLConnection;
@@ -9,12 +11,12 @@ import javax.net.ssl.HttpsURLConnection;
  */
 public class HTTPSConnectionHandler {
 
-    private static final String IP = "172.31.112.116";
-
     public static HttpsURLConnection getConnectionToACMEWebServer(String file) {
         try {
-            URL url = new URL("https", IP, file);
+            URL url = new URL("https", "10.1.0.3", file);
             HttpsURLConnection connection = (HttpsURLConnection) url.openConnection();
+            connection.setConnectTimeout(2000);
+            connection.setReadTimeout(3000);
             return connection;
         } catch (Exception e) {
             return null;
