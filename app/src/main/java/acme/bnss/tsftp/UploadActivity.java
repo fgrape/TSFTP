@@ -52,7 +52,7 @@ public class UploadActivity extends AppCompatActivity {
                 EditText fileET = (EditText)findViewById(R.id.fileIDField);
                 String fileString = "" + fileET.getText().toString();
                 if (isExternalStorageWritable()) {
-                    File file = new File(Environment.getExternalStoragePublicDirectory("TSFTP/Downloads"), fileString);
+                    File file = new File(Environment.getExternalStoragePublicDirectory("TSFTP"), fileString);
                     uploadTask.execute(new EmailFileTuple(email, file));
                 }
                 else {
