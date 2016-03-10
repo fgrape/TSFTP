@@ -68,4 +68,13 @@
         android:text="Download"
         android:background="#497ef1"
         android:onClick="downloadView"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textAppearance="?android:attr/textAppearanceMedium"
+        android:id="@+id/fileLinkText"
+        android:layout_below="@+id/uploadButton"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="63dp" />
 </RelativeLayout>
