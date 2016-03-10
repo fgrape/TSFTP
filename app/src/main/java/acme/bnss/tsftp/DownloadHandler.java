@@ -1,8 +1,14 @@
 package acme.bnss.tsftp;
 
+import android.os.Environment;
+
 import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.security.Key;
 import java.security.KeyStore;
 import java.security.cert.CertificateFactory;
@@ -35,16 +41,25 @@ public class DownloadHandler {
             String fileName = fileDescriptor.getFileName();
             Key symmetricKey = getSymmetricKey(hash);
             InputStream fileIn = getFileInputStream(symmetricKey, hash, fileName);
-            writeFileToDisk(fileIn);
+            writeFileToDisk(fileIn, fileName);
             fileIn.close();
             return new DownloadResult(fileName);
         } catch (Exception e) {
-            return DownloadResult.failure("");
+            return DownloadResult.failure("Failed to acquire file from server: " + e.getMessage());
         }
     }
 
-    private void writeFileToDisk(InputStream in) {
-
+    private void writeFileToDisk(InputStream in, String fileName) throws Exception {
+        if (!isExternalStorageWritable()) {
+            throw new Exception();
+        }
+        File file = new File(Environment.getExternalStoragePublicDirectory("TSFTP/Downloads"), fileName);
+        try (OutputStream out = new BufferedOutputStream(new FileOutputStream(file))) {
+            byte[] buff = new byte[1024];
+            for (int i; (i = in.read(buff)) != -1;) {
+                out.write(buff, 0, i);
+            }
+        }
     }
 
     private InputStream getFileInputStream(Key key, String hash, String fileName) throws Exception {
@@ -91,6 +106,14 @@ public class DownloadHandler {
 
     public void deleteFile(String fileLink) {
 
+    }
+
+    public boolean isExternalStorageWritable() {
+        String state = Environment.getExternalStorageState();
+        if (Environment.MEDIA_MOUNTED.equals(state)) {
+            return true;
+        }
+        return false;
     }
 
 }

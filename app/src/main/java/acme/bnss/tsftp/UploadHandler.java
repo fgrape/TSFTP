@@ -46,23 +46,26 @@ public class UploadHandler {
     }
 
     public UploadResult uploadFile(String email, File file, ProgressDialog progressDialog) {
+        // progressDialog.setMax(100);
         X509Certificate cert;
         try {
              cert = getCertificateFor(email);
         } catch (Exception e) {
-            return UploadResult.failure("Unknown recipient");
+            return UploadResult.failure("Failed to acquire recipient certificate: " + e.getMessage());
         }
+        // progressDialog.setProgress(10);
         Key symmetricKey;
         try {
             symmetricKey = getSymentricKey();
         } catch (Exception e) {
             return UploadResult.failure("");
         }
+        // progressDialog.setProgress(20);
         InputStream fileIn;
         try {
             fileIn = new BufferedInputStream(new FileInputStream(file));
         } catch (FileNotFoundException e) {
-            return UploadResult.failure("Could not read file");
+            return UploadResult.failure("Could not read file: " + e.getMessage());
         }
         HttpsURLConnection connection = HTTPSConnectionHandler.getConnectionToACMEWebServer("tsftp.php?action=upload");
         try {
@@ -103,24 +106,18 @@ public class UploadHandler {
                 return UploadResult.failure("Failed to communicate with server");
             }
             TSFTPFileDescriptor fileDescriptor = getFileDescriptor(connection.getInputStream());
-            if (fileDescriptor == null) {
-                return UploadResult.failure("");
-            }
             return new UploadResult(fileDescriptor);
         } catch (Exception e) {
-            return UploadResult.failure("");
+            return UploadResult.failure("Failed to upload file to server: " + e.getMessage());
         } finally {
             connection.disconnect();
         }
     }
 
-    private TSFTPFileDescriptor getFileDescriptor(InputStream in) {
+    private TSFTPFileDescriptor getFileDescriptor(InputStream in) throws Exception {
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(in))) {
             String line = reader.readLine();
             return new TSFTPFileDescriptor(line);
-        } catch (Exception e) {
-            message = "";
-            return null;
         }
     }
 
