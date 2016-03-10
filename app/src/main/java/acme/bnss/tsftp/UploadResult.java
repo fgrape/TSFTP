@@ -5,34 +5,34 @@ package acme.bnss.tsftp;
  */
 public class UploadResult {
 
-    private boolean successfull;
+    private boolean successful;
     private String message;
-    private String fileID;
+    private TSFTPFileDescriptor fileDescriptor;
 
-    public UploadResult() {
+    private UploadResult() {
 
     }
 
-    public UploadResult(String fileID) {
-        this.fileID = fileID;
-        successfull = true;
+    public UploadResult(TSFTPFileDescriptor fileDescriptor) {
+        this.fileDescriptor = fileDescriptor;
+        successful = true;
     }
 
-    public boolean wasSuccessfull() {
-        return successfull;
+    public boolean wasSuccessful() {
+        return successful;
     }
 
     public String getMessage() {
         return message;
     }
 
-    public String getFileID() {
-        return fileID;
+    public TSFTPFileDescriptor getFileDescriptor() {
+        return fileDescriptor;
     }
 
     public static UploadResult failure(String message) {
         UploadResult result = new UploadResult();
-        result.successfull = false;
+        result.successful = false;
         result.message = message;
         return result;
     }
