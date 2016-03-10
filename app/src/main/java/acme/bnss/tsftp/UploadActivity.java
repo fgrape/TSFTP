@@ -110,19 +110,21 @@ public class UploadActivity extends AppCompatActivity {
                         toast.show();
                     }
                 });
-            }
-            final String fileLink = result.getFileDescriptor().getFileLink();
-            String server = result.getFileDescriptor().getServer();
-            String hash = result.getFileDescriptor().getHash();
-            String fileName = result.getFileDescriptor().getFileName();
+            } else {
+                final String fileLink = result.getFileDescriptor().getFileLink();
+                String server = result.getFileDescriptor().getServer();
+                String hash = result.getFileDescriptor().getHash();
+                String fileName = result.getFileDescriptor().getFileName();
 
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    TextView resultText = (TextView)findViewById(R.id.fileLinkText);
-                    resultText.setText(fileLink);
-                }
-            });
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        TextView resultText = (TextView)findViewById(R.id.fileLinkText);
+                        resultText.setText(fileLink);
+                    }
+                });
+            }
+
 
 
             return null;
