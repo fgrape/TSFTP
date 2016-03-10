@@ -44,6 +44,16 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:id="@+id/fileField"
+        android:layout_below="@+id/textView"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentEnd="true" />
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Upload"
+        android:id="@+id/uploadButton"
+        android:background="#497ef0"
         android:layout_centerVertical="true"
         android:layout_alignParentEnd="true"
         android:layout_alignParentStart="true" />
@@ -51,10 +61,11 @@
     <Button
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Upload"
-        android:id="@+id/uploadButton"
+        android:id="@+id/downloadViewButton"
         android:layout_alignParentBottom="true"
-        android:layout_alignParentEnd="true"
         android:layout_alignParentStart="true"
-        android:background="#497ef0" />
+        android:layout_alignParentEnd="true"
+        android:text="Download"
+        android:background="#497ef1"
+        android:onClick="downloadView"/>
 </RelativeLayout>

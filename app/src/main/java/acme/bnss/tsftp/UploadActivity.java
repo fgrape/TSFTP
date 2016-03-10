@@ -3,6 +3,7 @@ package acme.bnss.tsftp;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Environment;
 import android.os.PowerManager;
@@ -36,7 +37,7 @@ public class UploadActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_upload);
 
-        Button uploadButton = (Button) findViewById(R.id.fab);
+        Button uploadButton = (Button) findViewById(R.id.uploadButton);
         uploadButton.setOnClickListener(new View.OnClickListener() {
 
             @Override
@@ -55,10 +56,16 @@ public class UploadActivity extends AppCompatActivity {
         });
 
         progressDialog = new ProgressDialog(UploadActivity.this);
-        progressDialog.setMessage("A message");
+        progressDialog.setMessage("Uploading cat gifs!");
         progressDialog.setIndeterminate(true);
         progressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
         progressDialog.setCancelable(true);
+    }
+
+    public void downloadView(View view){
+        Intent intent = new Intent(this, DownloadActivity.class);
+        //Add trivial code
+        startActivity(intent);
     }
 
     private class UploadTask extends AsyncTask<String, Integer, Void> {
