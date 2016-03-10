@@ -7,11 +7,13 @@ import java.nio.charset.MalformedInputException;
  */
 public class TSFTPFileDescriptor {
 
+    private String fileLink;
     private String server;
     private String fileName;
     private String hash;
 
     public TSFTPFileDescriptor(String fileLink) throws Exception {
+        this.fileLink = fileLink;
         String[] split = fileLink.split("/");
         try {
             server = split[2];
@@ -26,6 +28,10 @@ public class TSFTPFileDescriptor {
         this.server = server;
         this.fileName = fileName;
         this.hash = hash;
+    }
+
+    public String getFileLink() {
+        return fileLink;
     }
 
     public String getServer() {
