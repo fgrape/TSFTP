@@ -12,6 +12,8 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import java.io.BufferedInputStream;
@@ -44,7 +46,24 @@ public class UploadActivity extends AppCompatActivity {
             public void onClick(View view) {
                 // execute this when the downloader must be fired
                 final UploadTask uploadTask = new UploadTask(UploadActivity.this);
-                uploadTask.execute("email", "File");
+                EditText emailET = (EditText)findViewById(R.id.receiverEmailField);
+                String email = emailET.getText().toString();
+
+                EditText fileET = (EditText)findViewById(R.id.fileField);
+                String fileString = fileET.getText().toString();
+                if (isExternalStorageWritable()) {
+                    File file = new File(Environment.getExternalStoragePublicDirectory("TSFTP"), fileString);
+                    uploadTask.execute(new EmailFileTuple(email, file));
+                }
+                else {
+                    Context context = getApplicationContext();
+                    CharSequence text = "Cannot access SD Card internal memory";
+                    int duration = Toast.LENGTH_LONG;
+                    Toast toast = Toast.makeText(context, text, duration);
+                    toast.show();
+                }
+
+
 
                 progressDialog.setOnCancelListener(new DialogInterface.OnCancelListener() {
                     @Override
@@ -68,23 +87,54 @@ public class UploadActivity extends AppCompatActivity {
         startActivity(intent);
     }
 
-    private class UploadTask extends AsyncTask<String, Integer, Void> {
+    private class UploadTask extends AsyncTask<EmailFileTuple, Integer, Void> {
 
         private Context context;
+
 
         public UploadTask(Context context) {
             this.context = context;
         }
 
         @Override
-        protected Void doInBackground(String... params) {
-            String email = params[0];
-            String file  = params[1];
-            UploadResult result = handler.uploadFile(email, file, progressDialog);
+        protected Void doInBackground(EmailFileTuple... params) {
+            String email = params[0].getEmail();
+            File file  = params[0].getFile();
+            final UploadResult result = handler.uploadFile(email, file, progressDialog);
+            if (!result.wasSuccessful()){
+                runOnUiThread(new Runnable() {
+                    public void run() {
+                        CharSequence text = "Didn't work yo check this error: " + result.getMessage();
+                        int duration = Toast.LENGTH_LONG;
+                        Toast toast = Toast.makeText(UploadActivity.this, text, duration);
+                        toast.show();
+                    }
+                });
+            }
+            final String fileLink = result.getFileDescriptor().getFileLink();
+            String server = result.getFileDescriptor().getServer();
+            String hash = result.getFileDescriptor().getHash();
+            String fileName = result.getFileDescriptor().getFileName();
+
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    TextView resultText = (TextView)findViewById(R.id.fileLinkText);
+                    resultText.setText(fileLink);
+                }
+            });
+
 
             return null;
         }
 
+    }
+    public boolean isExternalStorageWritable() {
+        String state = Environment.getExternalStorageState();
+        if (Environment.MEDIA_MOUNTED.equals(state)) {
+            return true;
+        }
+        return false;
     }
 
 }
