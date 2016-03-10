@@ -45,7 +45,7 @@ public class UploadHandler {
 
     }
 
-    public UploadResult uploadFile(String email, String fileName, ProgressDialog progressDialog) {
+    public UploadResult uploadFile(String email, File file, ProgressDialog progressDialog) {
         X509Certificate cert;
         try {
              cert = getCertificateFor(email);
@@ -60,7 +60,7 @@ public class UploadHandler {
         }
         InputStream fileIn;
         try {
-            fileIn = new BufferedInputStream(new FileInputStream(new File(fileName)));
+            fileIn = new BufferedInputStream(new FileInputStream(file));
         } catch (FileNotFoundException e) {
             return UploadResult.failure("Could not read file");
         }
@@ -76,8 +76,8 @@ public class UploadHandler {
             connection.setRequestProperty("Content-Type", "multipart/form-data;boundary=" + boundary);
 
             printer.append("--" + boundary).append(crlf);
-            printer.append("Content-Disposition: form-data; name=\"encryptedFile\"; fileName=\"" + fileName + " \"").append(crlf);
-            printer.append("Content-Type: " + URLConnection.guessContentTypeFromName(fileName)).append(crlf);
+            printer.append("Content-Disposition: form-data; name=\"encryptedFile\"; fileName=\"" + file.getName() + " \"").append(crlf);
+            printer.append("Content-Type: " + URLConnection.guessContentTypeFromName(file.getName())).append(crlf);
             printer.append("Content-Transfer-Encoding: binary").append(crlf);
             printer.append(crlf);
             printer.flush();
