@@ -7,14 +7,14 @@ public class DownloadResult {
 
     private boolean successfull;
     private String message;
-    private String fileID;
+    private String fileName;
 
     public DownloadResult() {
 
     }
 
-    public DownloadResult(String fileID) {
-        this.fileID = fileID;
+    public DownloadResult(String fileName) {
+        this.fileName = fileName;
         successfull = true;
     }
 
@@ -26,8 +26,8 @@ public class DownloadResult {
         return message;
     }
 
-    public String getFileID() {
-        return fileID;
+    public String getFileName() {
+        return fileName;
     }
 
     public static DownloadResult failure(String message) {

@@ -37,10 +37,10 @@ public class DownloadHandler {
             InputStream fileIn = getFileInputStream(symmetricKey, hash, fileName);
             writeFileToDisk(fileIn);
             fileIn.close();
+            return new DownloadResult(fileName);
         } catch (Exception e) {
             return DownloadResult.failure("");
         }
-        return null;
     }
 
     private void writeFileToDisk(InputStream in) {
