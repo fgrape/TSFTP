@@ -12,9 +12,8 @@ public class HTTPSConnectionHandler {
     private static final String IP = "172.31.112.116";
 
     public static HttpsURLConnection getConnectionToACMEWebServer(String file) {
-        URL url;
         try {
-            url = new URL("https", IP, file);
+            URL url = new URL("https", IP, file);
             HttpsURLConnection connection = (HttpsURLConnection) url.openConnection();
             return connection;
         } catch (Exception e) {
