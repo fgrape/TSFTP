@@ -102,8 +102,11 @@ public class UploadHandler {
             if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
                 return UploadResult.failure("Failed to communicate with server");
             }
-            String fileID = getFileID(connection.getInputStream());
-            return new UploadResult(fileID);
+            TSFTPFileDescriptor fileDescriptor = getFileDescriptor(connection.getInputStream());
+            if (fileDescriptor == null) {
+                return UploadResult.failure("");
+            }
+            return new UploadResult(fileDescriptor);
         } catch (Exception e) {
             return UploadResult.failure("");
         } finally {
@@ -111,9 +114,14 @@ public class UploadHandler {
         }
     }
 
-    private String getFileID(InputStream in) {
-        // TODO Implement. Base64?
-        return null;
+    private TSFTPFileDescriptor getFileDescriptor(InputStream in) {
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(in))) {
+            String line = reader.readLine();
+            return new TSFTPFileDescriptor(line);
+        } catch (Exception e) {
+            message = "";
+            return null;
+        }
     }
 
     private void encryptFile(Key key, InputStream in, OutputStream out) throws  IOException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException {
