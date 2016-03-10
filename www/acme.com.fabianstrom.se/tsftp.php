@@ -3,7 +3,8 @@ define('CERTS_DIR', 'certs');
 define('FILES_DIR', 'files');
 define('KEY_FILENAME', '__tsftp_encryption_key');
 
-$actions = ['cert', 'file', 'key', 'upload', 'delete'];
+$actions = array('cert', 'file', 'key', 'upload', 'delete');
+
 if (!isset($_GET['action'])) {
 	// no action
 	bye('no action', 400);
@@ -82,7 +83,7 @@ function handleUpload() {
 		file_put_contents($dir.'/'.KEY_FILENAME, $key);
 		move_uploaded_file($tmppath, $filepath);
 
-		echo $hash;
+		echo 'tsftp://acme.com.fabianstrom.se/' . $hash . '/' . $_FILES['file']['name'];
 	}
 }
 
