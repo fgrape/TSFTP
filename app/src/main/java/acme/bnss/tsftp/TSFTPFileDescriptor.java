@@ -20,7 +20,7 @@ public class TSFTPFileDescriptor {
             hash = split[3];
             fileName = split[4];
         } catch (ArrayIndexOutOfBoundsException e) {
-            throw new Exception();
+            throw new Exception("Invalid file link: " + fileLink);
         }
     }
 

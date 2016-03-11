@@ -56,7 +56,7 @@ public class UploadHandler {
         // progressDialog.setProgress(10);
         Key symmetricKey;
         try {
-            symmetricKey = getSymentricKey();
+            symmetricKey = createSymmetricKey();
         } catch (Exception e) {
             return UploadResult.failure("");
         }
@@ -70,13 +70,14 @@ public class UploadHandler {
         HttpsURLConnection connection = HTTPSConnectionHandler.getConnectionToACMEWebServer("tsftp.php?action=upload");
         try {
             connection.setRequestMethod("POST");
-            connection.setDoOutput(true);
-            OutputStream out;
-            out = connection.getOutputStream();
-            PrintStream printer = new PrintStream(out);
-            String crlf = "\r\n";
             String boundary = Long.toHexString(System.currentTimeMillis());
             connection.setRequestProperty("Content-Type", "multipart/form-data;boundary=" + boundary);
+
+            String crlf = "\r\n";
+
+            connection.setDoOutput(true);
+            OutputStream out = connection.getOutputStream();
+            PrintStream printer = new PrintStream(out);
 
             printer.append("--" + boundary).append(crlf);
             printer.append("Content-Disposition: form-data; name=\"encryptedFile\"; fileName=\"" + file.getName() + " \"").append(crlf);
@@ -138,7 +139,7 @@ public class UploadHandler {
         out2.write(symmetricKey.getEncoded());
     }
 
-    private SecretKey getSymentricKey() throws NoSuchAlgorithmException {
+    private SecretKey createSymmetricKey() throws NoSuchAlgorithmException {
         return KeyGenerator.getInstance("AES").generateKey();
     }
 

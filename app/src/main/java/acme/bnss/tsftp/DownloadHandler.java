@@ -104,16 +104,24 @@ public class DownloadHandler {
         return key;
     }
 
-    public void deleteFile(String fileLink) {
-
-    }
-
     public boolean isExternalStorageWritable() {
         String state = Environment.getExternalStorageState();
         if (Environment.MEDIA_MOUNTED.equals(state)) {
             return true;
         }
         return false;
+    }
+
+    public void deleteFile(String fileLink) {
+        TSFTPFileDescriptor fileDescriptor;
+        try {
+            fileDescriptor = new TSFTPFileDescriptor(fileLink);
+        } catch (Exception e) {
+            // TODO Something.
+            return;
+        }
+        String file = "tsftp.php?action=delete&hash=" +fileDescriptor.getHash();
+        // TODO Implements.
     }
 
 }

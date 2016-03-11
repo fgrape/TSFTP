@@ -13,9 +13,9 @@ public class HTTPSConnectionHandler {
 
     public static HttpsURLConnection getConnectionToACMEWebServer(String file) {
         try {
-            URL url = new URL("https", "10.1.0.3", file);
+            URL url = new URL("https", "acme.com.fabianstrom.se", file);
             HttpsURLConnection connection = (HttpsURLConnection) url.openConnection();
-            connection.setConnectTimeout(2000);
+            connection.setConnectTimeout(3000);
             connection.setReadTimeout(3000);
             return connection;
         } catch (Exception e) {
