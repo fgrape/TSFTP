@@ -67,8 +67,9 @@ public class UploadHandler {
         } catch (FileNotFoundException e) {
             return UploadResult.failure("Could not read file: " + e.getMessage());
         }
-        HttpsURLConnection connection = HTTPSConnectionHandler.getConnectionToACMEWebServer("tsftp.php?action=upload");
+        HttpsURLConnection connection = null;
         try {
+            connection = HTTPSConnectionHandler.getConnectionToACMEWebServer("tsftp.php?action=upload");
             connection.setRequestMethod("POST");
             String boundary = Long.toHexString(System.currentTimeMillis());
             connection.setRequestProperty("Content-Type", "multipart/form-data;boundary=" + boundary);
@@ -111,7 +112,9 @@ public class UploadHandler {
         } catch (Exception e) {
             return UploadResult.failure("Failed to upload file to server: " + e.getMessage());
         } finally {
-            connection.disconnect();
+            if (connection != null) {
+                connection.disconnect();
+            }
         }
     }
 
@@ -143,7 +146,7 @@ public class UploadHandler {
         return KeyGenerator.getInstance("AES").generateKey();
     }
 
-    private X509Certificate getCertificateFor(String email) throws IOException, ProtocolException, CertificateException {
+    private X509Certificate getCertificateFor(String email) throws Exception {
         String file = "tsftp.php?action=cert&user=" + getUser(email);
         HttpsURLConnection connection = HTTPSConnectionHandler.getConnectionToACMEWebServer(file);
         connection.setRequestMethod("GET");

@@ -112,16 +112,27 @@ public class DownloadHandler {
         return false;
     }
 
-    public void deleteFile(String fileLink) {
+    public boolean deleteFile(String fileLink) {
         TSFTPFileDescriptor fileDescriptor;
         try {
             fileDescriptor = new TSFTPFileDescriptor(fileLink);
         } catch (Exception e) {
-            // TODO Something.
-            return;
+            return false;
         }
-        String file = "tsftp.php?action=delete&hash=" +fileDescriptor.getHash();
-        // TODO Implements.
+        String file = "tsftp.php?action=delete&hash=" + fileDescriptor.getHash();
+        HttpsURLConnection connection = null;
+        try {
+            connection = HTTPSConnectionHandler.getConnectionToACMEWebServer(file);
+            connection.setRequestMethod("POST");
+            // TODO Implement.
+        } catch (Exception e) {
+            return false;
+        } finally {
+            if (connection != null) {
+                connection.disconnect();
+            }
+        }
+        return true;
     }
 
 }
