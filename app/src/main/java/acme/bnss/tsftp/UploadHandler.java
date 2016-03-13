@@ -25,15 +25,19 @@ import java.net.ProtocolException;
 import java.net.URLConnection;
 import java.net.URLEncoder;
 import java.nio.charset.Charset;
+import java.security.AlgorithmParameters;
 import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
+import java.security.spec.AlgorithmParameterSpec;
+
 import javax.crypto.Cipher;
 import javax.crypto.CipherOutputStream;
 import javax.crypto.KeyGenerator;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
+import javax.crypto.spec.IvParameterSpec;
 import javax.net.ssl.HttpsURLConnection;
 import javax.security.cert.CertificateException;
 import javax.security.cert.X509Certificate;
@@ -151,14 +155,16 @@ public class UploadHandler {
         }
     }
 
-    private void encryptFile(Key key, InputStream in, OutputStream out) throws  IOException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException {
-        Cipher aes = Cipher.getInstance("AES");
-        aes.init(Cipher.ENCRYPT_MODE, key);
+    private void encryptFile(Key key, InputStream in, OutputStream out) throws  Exception {
+        Cipher aes = Cipher.getInstance("AES/CBC/PKCS5Padding");
+        IvParameterSpec ivSpec = new IvParameterSpec("bnss1337bnss1337".getBytes("ISO8859-1"));
+        aes.init(Cipher.ENCRYPT_MODE, key, ivSpec);
         CipherOutputStream out2 = new CipherOutputStream(out, aes);
         byte[] buff = new byte[1024];
         for (int i; (i = in.read(buff)) != -1;) {
             out2.write(buff, 0 ,i);
         }
+        // out2.flush();
     }
 
     private void encryptKey(PublicKey publicKey, Key symmetricKey, OutputStream out) throws  Exception {
@@ -167,6 +173,11 @@ public class UploadHandler {
         byte[] block = new byte[rsa.getBlockSize()];
         byte[] key = symmetricKey.getEncoded();
         System.arraycopy(key, 0, block, 0, 16);
+        String keys = "";
+        for (int j = 0; j < 16; j++) {
+            keys += Integer.toHexString(key[j]) + " ";
+        }
+        Log.d("NYCKEL", "får nyckel: " + key);
         out.write(rsa.doFinal(block));
     }
 
