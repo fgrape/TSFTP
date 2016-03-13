@@ -84,13 +84,13 @@ public class DownloadHandler {
             Cipher rsa = Cipher.getInstance("RSA");
             rsa.init(Cipher.DECRYPT_MODE, privateKey);
             InputStream in = new BufferedInputStream(connection.getInputStream());
-            InputStream in2 = new CipherInputStream(in, rsa);
-            ByteArrayOutputStream buff = new ByteArrayOutputStream();
-            for (int b; (b = in2.read()) != -1;) {
-                buff.write(b);
+            byte[] block = new byte[rsa.getOutputSize(rsa.getBlockSize())];
+            int i = in.read(block);
+            if (i != block.length) {
+                throw new Exception("i != block.length");
             }
             byte[] keyBytes = new byte[16];
-            System.arraycopy(buff.toByteArray(), 0, keyBytes, 0, 16);
+            System.arraycopy(rsa.doFinal(block), 0, keyBytes, 0, 16);
             SecretKey symmetricKey = new SecretKeySpec(keyBytes, "AES");
             return symmetricKey;
         } finally {
