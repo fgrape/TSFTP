@@ -141,6 +141,11 @@ public class UploadActivity extends AppCompatActivity {
             mWakeLock.acquire();
             progressDialog.show();
         }
+        @Override
+        protected void onPostExecute(Void v) {
+            mWakeLock.release();
+            progressDialog.dismiss();
+        }
 
     }
     public boolean isExternalStorageWritable() {
@@ -150,6 +155,8 @@ public class UploadActivity extends AppCompatActivity {
         }
         return false;
     }
+
+
 
 
 }
