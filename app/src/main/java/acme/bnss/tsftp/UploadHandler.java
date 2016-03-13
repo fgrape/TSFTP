@@ -38,6 +38,7 @@ import javax.crypto.KeyGenerator;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
 import javax.net.ssl.HttpsURLConnection;
 import javax.security.cert.CertificateException;
 import javax.security.cert.X509Certificate;
@@ -97,6 +98,7 @@ public class UploadHandler {
             encryptFile(symmetricKey, fileIn, buffOut);
             temp = URLEncoder.encode(buff.toString("ISO8859-1"), "ISO8859-1");
             out.write(temp.getBytes(ISO8859_1));
+            Log.d("Data", "uppladdad data: " + new String(buff.toByteArray(), "ISO8859-1").substring(0, 50));
 
             printer.append("&fileName=");
             printer.append(file.getName());
@@ -162,26 +164,23 @@ public class UploadHandler {
         CipherOutputStream out2 = new CipherOutputStream(out, aes);
         byte[] buff = new byte[1024];
         for (int i; (i = in.read(buff)) != -1;) {
-            out2.write(buff, 0 ,i);
+             out2.write(buff, 0 ,i);
         }
-        // out2.flush();
+        out2.flush();
+        out2.close();
     }
 
     private void encryptKey(PublicKey publicKey, Key symmetricKey, OutputStream out) throws  Exception {
-        Cipher rsa = Cipher.getInstance("RSA");
+        out.write(symmetricKey.getEncoded());
+      /*  Cipher rsa = Cipher.getInstance("RSA/ECB/PKCS1Padding");
         rsa.init(Cipher.ENCRYPT_MODE, publicKey);
-        byte[] block = new byte[rsa.getBlockSize()];
         byte[] key = symmetricKey.getEncoded();
-        System.arraycopy(key, 0, block, 0, 16);
-        String keys = "";
-        for (int j = 0; j < 16; j++) {
-            keys += Integer.toHexString(key[j]) + " ";
-        }
-        Log.d("NYCKEL", "får nyckel: " + key);
-        out.write(rsa.doFinal(block));
+        */Log.d("NYCKEL", "Uppladdad nyckel: " + new String(symmetricKey.getEncoded(), "ISO8859-1"));
+        //out.write(rsa.doFinal(key));
     }
 
     private SecretKey createSymmetricKey() throws NoSuchAlgorithmException {
+        //return  new SecretKeySpec(new byte[]{0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15}, 0, 16, "AES");
         return KeyGenerator.getInstance("AES").generateKey();
     }
 
