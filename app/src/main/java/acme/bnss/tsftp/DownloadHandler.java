@@ -89,7 +89,9 @@ public class DownloadHandler {
             for (int b; (b = in2.read()) != -1;) {
                 buff.write(b);
             }
-            SecretKey symmetricKey = new SecretKeySpec(buff.toByteArray(), "AES");
+            byte[] keyBytes = new byte[16];
+            System.arraycopy(buff.toByteArray(), 0, keyBytes, 0, 16);
+            SecretKey symmetricKey = new SecretKeySpec(keyBytes, "AES");
             return symmetricKey;
         } finally {
             connection.disconnect();

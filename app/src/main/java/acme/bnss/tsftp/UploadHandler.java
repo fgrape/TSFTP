@@ -3,8 +3,11 @@ package acme.bnss.tsftp;
 import android.app.ProgressDialog;
 import android.util.Base64;
 import android.util.Base64InputStream;
+import android.util.Base64OutputStream;
+import android.util.Log;
 
 import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -20,6 +23,7 @@ import java.io.PrintWriter;
 import java.net.HttpURLConnection;
 import java.net.ProtocolException;
 import java.net.URLConnection;
+import java.net.URLEncoder;
 import java.nio.charset.Charset;
 import java.security.InvalidKeyException;
 import java.security.Key;
@@ -71,39 +75,61 @@ public class UploadHandler {
         try {
             connection = HTTPSConnectionHandler.getConnectionToACMEWebServer("tsftp.php?action=upload");
             connection.setRequestMethod("POST");
-            String boundary = Long.toHexString(System.currentTimeMillis());
-            connection.setRequestProperty("Content-Type", "multipart/form-data;boundary=" + boundary);
-
-            String crlf = "\r\n";
+        //    String boundary = Long.toHexString(System.currentTimeMillis());
+        //    connection.setRequestProperty("Content-Type", "multipart/form-data;boundary=" + boundary);
 
             connection.setDoOutput(true);
-            OutputStream out = connection.getOutputStream();
+            OutputStream out = new BufferedOutputStream(connection.getOutputStream());
             PrintStream printer = new PrintStream(out);
 
-            printer.append("--" + boundary).append(crlf);
-            printer.append("Content-Disposition: form-data; name=\"encryptedFile\"; fileName=\"" + file.getName() + " \"").append(crlf);
-            printer.append("Content-Type: " + URLConnection.guessContentTypeFromName(file.getName())).append(crlf);
-            printer.append("Content-Transfer-Encoding: binary").append(crlf);
-            printer.append(crlf);
+            Charset ISO8859_1 = Charset.forName("ISO8859-1");
+            ByteArrayOutputStream buff = null;
+            String temp;
+            OutputStream buffOut;
+
+            printer.append("fileData=");
+            buff = new ByteArrayOutputStream();
+            buffOut = new Base64OutputStream(buff, Base64.DEFAULT);
+            encryptFile(symmetricKey, fileIn, buffOut);
+            temp = URLEncoder.encode(buff.toString("ISO8859-1"), "ISO8859-1");
+            out.write(temp.getBytes(ISO8859_1));
+
+            printer.append("&fileName=");
+            printer.append(file.getName());
+
+            printer.append("&encryptionKey=");
+            buff = new ByteArrayOutputStream();
+            buffOut = new Base64OutputStream(buff, Base64.DEFAULT);
+            encryptKey(cert.getPublicKey(), symmetricKey, buffOut);
+            temp = URLEncoder.encode(buff.toString("ISO8859-1"), "ISO8859-1");
+            out.write(temp.getBytes(ISO8859_1));
+
             printer.flush();
-            encryptFile(symmetricKey, fileIn, out);
             out.flush();
-            printer.append(crlf);
 
-            printer.append("--" + boundary).append(crlf);
-            printer.append("Content-Disposition: form-data; name=\"encryptionKey\"; fileName=\"encryptionKey").append(crlf);
-            printer.append("Content-Type: binary").append(crlf);
-            printer.append("Content-Transfer-Encoding: binary").append(crlf);
-            printer.append(crlf);
-            printer.flush();
-            encryptKey(cert.getPublicKey(), symmetricKey, out);
-            out.flush();
-            printer.append(crlf);
+//            printer.append("--" + boundary).append(crlf);
+//            printer.append("Content-Disposition: form-data; name=\"encryptedFile\"; fileName=\"" + file.getName() + " \"").append(crlf);
+//            printer.append("Content-Type: " + URLConnection.guessContentTypeFromName(file.getName())).append(crlf);
+//            printer.append("Content-Transfer-Encoding: binary").append(crlf);
+//            printer.append(crlf);
+//            printer.flush();
+//            encryptFile(symmetricKey, fileIn, out);
+//            out.flush();
+//            printer.append(crlf);
+//
+//            printer.append("--" + boundary).append(crlf);
+//            printer.append("Content-Disposition: form-data; name=\"encryptionKey\"; fileName=\"encryptionKey").append(crlf);
+//            printer.append("Content-Type: binary").append(crlf);
+//            printer.append("Content-Transfer-Encoding: binary").append(crlf);
+//            printer.append(crlf);
+//            printer.flush();
+//            encryptKey(cert.getPublicKey(), symmetricKey, out);
+//            out.flush();
+//            printer.append(crlf);
+//
+//            printer.append("--" + boundary + "--").append(crlf);
+//            printer.flush();
 
-            printer.append("--" + boundary + "--").append(crlf);
-            printer.flush();
-
-            connection.connect();
             if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
                 return UploadResult.failure("Failed to communicate with server");
             }
@@ -135,11 +161,13 @@ public class UploadHandler {
         }
     }
 
-    private void encryptKey(PublicKey publicKey, Key symmetricKey, OutputStream out) throws  IOException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException {
-        Cipher aes = Cipher.getInstance("RSA");
-        aes.init(Cipher.ENCRYPT_MODE, publicKey);
-        CipherOutputStream out2 = new CipherOutputStream(out, aes);
-        out2.write(symmetricKey.getEncoded());
+    private void encryptKey(PublicKey publicKey, Key symmetricKey, OutputStream out) throws  Exception {
+        Cipher rsa = Cipher.getInstance("RSA");
+        rsa.init(Cipher.ENCRYPT_MODE, publicKey);
+        byte[] block = new byte[rsa.getBlockSize()];
+        byte[] key = symmetricKey.getEncoded();
+        System.arraycopy(key, 0, block, 0, 16);
+        out.write(rsa.doFinal(block));
     }
 
     private SecretKey createSymmetricKey() throws NoSuchAlgorithmException {

@@ -76,5 +76,6 @@
         android:id="@+id/fileLinkText"
         android:layout_below="@+id/uploadButton"
         android:layout_centerHorizontal="true"
-        android:layout_marginTop="63dp" />
+        android:layout_marginTop="63dp"
+        android:textIsSelectable="true" />
 </RelativeLayout>
