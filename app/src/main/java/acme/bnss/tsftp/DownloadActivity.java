@@ -129,6 +129,11 @@ public class DownloadActivity extends AppCompatActivity {
             mWakeLock.acquire();
             progressDialog.show();
         }
+        @Override
+        protected void onPostExecute(Void v) {
+            mWakeLock.release();
+            progressDialog.dismiss();
+        }
 
     }
     public boolean isExternalStorageWritable() {
