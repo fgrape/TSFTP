@@ -12,6 +12,8 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import java.io.BufferedInputStream;
@@ -33,19 +35,27 @@ public class DownloadActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_download);
 
-        Intent intent = getIntent();
-        String action = intent.getAction();
-        Uri data = intent.getData();
-        System.out.print(data);
-
-        Button downLoadButton = (Button) findViewById(R.id.downloadButton);
-        downLoadButton.setOnClickListener(new View.OnClickListener() {
+        Button downloadButton = (Button) findViewById(R.id.downloadButton);
+        downloadButton.setOnClickListener(new View.OnClickListener() {
 
             @Override
             public void onClick(View view) {
                 // execute this when the downloader must be fired
                 final DownloadTask downloadTask = new DownloadTask(DownloadActivity.this);
-                downloadTask.execute("fileID");
+                EditText fileIDET = (EditText)findViewById(R.id.fileIDField);
+                String fileID = fileIDET.getText().toString();
+                if (isExternalStorageWritable()) {
+                    downloadTask.execute(fileID);
+                }
+                else {
+                    Context context = getApplicationContext();
+                    CharSequence text = "Cannot access SD Card memory";
+                    int duration = Toast.LENGTH_LONG;
+                    Toast toast = Toast.makeText(context, text, duration);
+                    toast.show();
+                }
+
+
 
                 progressDialog.setOnCancelListener(new DialogInterface.OnCancelListener() {
                     @Override
@@ -63,78 +73,51 @@ public class DownloadActivity extends AppCompatActivity {
         progressDialog.setCancelable(true);
     }
 
+    public void downloadView(View view){
+        Intent intent = new Intent(this, DownloadActivity.class);
+        //Add trivial code
+        startActivity(intent);
+    }
+
     private class DownloadTask extends AsyncTask<String, Integer, Void> {
 
         private Context context;
         private PowerManager.WakeLock mWakeLock;
 
+
         public DownloadTask(Context context) {
             this.context = context;
         }
 
+        @Override
         protected Void doInBackground(String... params) {
-            InputStream input = null;
-            FileOutputStream output = null;
-            HttpURLConnection connection = null;
-            String fileID  = params[0];
-            DownloadResult result = handler.downloadFile(fileID);
-            try {
-                //TODO: Move to HTTPSConnectionHandler
-                URL url = new URL("http://172.31.212.116/tsftp.php/" + fileID);
-                connection = (HttpURLConnection) url.openConnection();
-                connection.connect();
-
-                // expect HTTP 200 OK, so we don't mistakenly save error report
-                // instead of the file
-                /*if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
-                    return "Server returned HTTP " + connection.getResponseCode()
-                            + " " + connection.getResponseMessage();
-                }*/
-
-                // this will be useful to display download percentage
-                // might be -1: server did not report the length
-                int fileLength = connection.getContentLength();
-
-                // download the file
-                input = connection.getInputStream();
-                if (isExternalStorageWritable()) {
-                    File file = new File(Environment.getExternalStoragePublicDirectory("TSFTP/Downloads"), fileID);
-                    output = new FileOutputStream(file);
-                }
-                byte data[] = new byte[4096];
-                long total = 0;
-                int count;
-                while ((count = input.read(data)) != -1) {
-                    // allow canceling with back button
-                    if (isCancelled()) {
-                        input.close();
-                        return null;
+            String fileID = params[0];
+            final DownloadResult result = handler.downloadFile(fileID);
+            if (!result.wasSuccessfull()){
+                runOnUiThread(new Runnable() {
+                    public void run() {
+                        CharSequence text = "Didn't work yo check this error: " + result.getMessage();
+                        int duration = Toast.LENGTH_LONG;
+                        Toast toast = Toast.makeText(DownloadActivity.this, text, duration);
+                        toast.show();
                     }
-                    total += count;
-                    // publishing the progress....
-                    if (fileLength > 0) // only if total length is known
-                        publishProgress((int) (total * 100 / fileLength));
-                    output.write(data, 0, count);
-                }
-            } catch (Exception e) {
-                //return e.toString();
-                //TODO: Do something
-            } finally {
-                try {
-                    if (output != null)
-                        output.close();
-                    if (input != null)
-                        input.close();
-                } catch (IOException ignored) {
-                }
-
-                if (connection != null)
-                    connection.disconnect();
+                });
+            } else {
+                //Toast some stuff
+                runOnUiThread(new Runnable() {
+                    public void run() {
+                        CharSequence text = "Cat gifs downloaded!: \n " + result.getFileName();
+                        int duration = Toast.LENGTH_LONG;
+                        Toast toast = Toast.makeText(DownloadActivity.this, text, duration);
+                        toast.show();
+                    }
+                });
             }
+
+
+
             return null;
         }
-
-
         @Override
         protected void onPreExecute() {
             super.onPreExecute();
@@ -147,46 +130,13 @@ public class DownloadActivity extends AppCompatActivity {
             progressDialog.show();
         }
 
-        public boolean isExternalStorageWritable() {
-            String state = Environment.getExternalStorageState();
-            if (Environment.MEDIA_MOUNTED.equals(state)) {
-                return true;
-            }
-            return false;
+    }
+    public boolean isExternalStorageWritable() {
+        String state = Environment.getExternalStorageState();
+        if (Environment.MEDIA_MOUNTED.equals(state)) {
+            return true;
         }
-
-        @Override
-        protected void onProgressUpdate(Integer... progress) {
-            super.onProgressUpdate(progress);
-            // if we get here, length is known, now set indeterminate to false
-            progressDialog.setIndeterminate(false);
-            progressDialog.setMax(100);
-            progressDialog.setProgress(progress[0]);
-        }
-
-        //@Override
-        protected void onPostExecute(String result) {
-            mWakeLock.release();
-            progressDialog.dismiss();
-            Scanner in = null;
-            if (result != null) {
-                Toast.makeText(context, "Download error: " + result, Toast.LENGTH_LONG).show();
-            }else {
-                Toast.makeText(context, "File downloaded", Toast.LENGTH_LONG).show();
-                try {
-                    in = new Scanner(new BufferedInputStream(openFileInput("index.html")));
-                    StringBuilder sb = new StringBuilder();
-
-                    while (in.hasNext()){
-                        sb.append(in.next());
-                    }
-
-                    Toast.makeText(context, sb.toString(), Toast.LENGTH_SHORT).show();
-                } catch (Exception e){
-                    e.printStackTrace();
-                }
-            }
-        }
+        return false;
     }
 
 }

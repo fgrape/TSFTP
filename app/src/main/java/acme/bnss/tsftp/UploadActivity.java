@@ -57,7 +57,7 @@ public class UploadActivity extends AppCompatActivity {
                 }
                 else {
                     Context context = getApplicationContext();
-                    CharSequence text = "Cannot access SD Card internal memory";
+                    CharSequence text = "Cannot access SD Card memory";
                     int duration = Toast.LENGTH_LONG;
                     Toast toast = Toast.makeText(context, text, duration);
                     toast.show();
@@ -90,6 +90,7 @@ public class UploadActivity extends AppCompatActivity {
     private class UploadTask extends AsyncTask<EmailFileTuple, Integer, Void> {
 
         private Context context;
+        private PowerManager.WakeLock mWakeLock;
 
 
         public UploadTask(Context context) {
@@ -129,6 +130,17 @@ public class UploadActivity extends AppCompatActivity {
 
             return null;
         }
+        @Override
+        protected void onPreExecute() {
+            super.onPreExecute();
+            // take CPU lock to prevent CPU from going off if the user
+            // presses the power button during download
+            PowerManager pm = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
+            mWakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,
+                    getClass().getName());
+            mWakeLock.acquire();
+            progressDialog.show();
+        }
 
     }
     public boolean isExternalStorageWritable() {
@@ -138,5 +150,6 @@ public class UploadActivity extends AppCompatActivity {
         }
         return false;
     }
+
 
 }
