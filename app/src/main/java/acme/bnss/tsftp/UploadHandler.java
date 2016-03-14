@@ -172,11 +172,13 @@ public class UploadHandler {
 
     private void encryptKey(PublicKey publicKey, Key symmetricKey, OutputStream out) throws  Exception {
         out.write(symmetricKey.getEncoded());
-      /*  Cipher rsa = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+        Cipher rsa = Cipher.getInstance("RSA");
         rsa.init(Cipher.ENCRYPT_MODE, publicKey);
         byte[] key = symmetricKey.getEncoded();
-        */Log.d("NYCKEL", "Uppladdad nyckel: " + new String(symmetricKey.getEncoded(), "ISO8859-1"));
-        //out.write(rsa.doFinal(key));
+        Log.d("NYCKEL", "Ursprungsnyckel är: " + new String(key, "ISO8859-1") + "    Längd = " + key.length);
+        byte[] encrypted = rsa.doFinal(key);
+        out.write(encrypted);
+        out.flush();
     }
 
     private SecretKey createSymmetricKey() throws NoSuchAlgorithmException {
