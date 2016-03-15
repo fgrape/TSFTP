@@ -7,6 +7,7 @@ import android.util.Log;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
@@ -34,6 +35,8 @@ import javax.security.cert.X509Certificate;
  * Created by Erik Borgstrom on 2016-03-08.
  */
 public class DownloadHandler {
+
+    private long length;
 
     public DownloadHandler() {
 
@@ -63,19 +66,24 @@ public class DownloadHandler {
         }
     }
 
+    private void decryptFile(Key symmetricKey, InputStream in, OutputStream out) {
+
+    }
+
     private void writeFileToDisk(InputStream in, String fileName) throws Exception {
         if (!isExternalStorageWritable()) {
             throw new Exception("Could not write to external storage");
         }
         File file = new File(Environment.getExternalStoragePublicDirectory("TSFTP/Downloads"), fileName);
         try (OutputStream out = new FileOutputStream(file)) {
-            byte[] buff = new byte[512];
+            byte[] buff = new byte[1024];
             for (int i; (i = in.read(buff)) != -1;) {
                 out.write(buff, 0, i);
             }
-            in.close();
+            Log.d("FILE", "Length =================================================== " + length);
             out.flush();
             out.close();
+            in.close();
         }
     }
 
@@ -86,7 +94,7 @@ public class DownloadHandler {
         connection.connect();
         Cipher aes = Cipher.getInstance("AES/CBC/PKCS5Padding");
         IvParameterSpec ivSpec = new IvParameterSpec("bnss1337bnss1337".getBytes("ISO8859-1"));
-        aes.init(Cipher.ENCRYPT_MODE, key, ivSpec);
+        aes.init(Cipher.DECRYPT_MODE, key, ivSpec);
         InputStream in = connection.getInputStream();
         InputStream in2 = new CipherInputStream(in, aes);
         return in2;

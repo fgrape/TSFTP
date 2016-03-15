@@ -11,6 +11,7 @@ import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -95,7 +96,8 @@ public class UploadHandler {
             printer.append("fileData=");
             buff = new ByteArrayOutputStream();
             buffOut = new Base64OutputStream(buff, Base64.DEFAULT);
-            encryptFile(symmetricKey, fileIn, buffOut);
+            encryptFile(symmetricKey, fileIn, buffOut, file.length());
+            fileIn.close();
             temp = URLEncoder.encode(buff.toString("ISO8859-1"), "ISO8859-1");
             out.write(temp.getBytes(ISO8859_1));
             Log.d("Data", "uppladdad data: " + new String(buff.toByteArray(), "ISO8859-1").substring(0, 50));
@@ -157,17 +159,20 @@ public class UploadHandler {
         }
     }
 
-    private void encryptFile(Key key, InputStream in, OutputStream out) throws  Exception {
+    private void encryptFile(Key key, InputStream in, OutputStream out, long length) throws  Exception {
         Cipher aes = Cipher.getInstance("AES/CBC/PKCS5Padding");
         IvParameterSpec ivSpec = new IvParameterSpec("bnss1337bnss1337".getBytes("ISO8859-1"));
         aes.init(Cipher.ENCRYPT_MODE, key, ivSpec);
-        CipherOutputStream out2 = new CipherOutputStream(out, aes);
+        Log.d("FILE", "Length ============================================== " + length);
+        OutputStream out2 = new CipherOutputStream(out, aes);
         byte[] buff = new byte[1024];
         for (int i; (i = in.read(buff)) != -1;) {
-             out2.write(buff, 0 ,i);
+            out2.write(buff);
         }
         out2.flush();
         out2.close();
+        out.flush();
+        in.close();
     }
 
     private void encryptKey(PublicKey publicKey, Key symmetricKey, OutputStream out) throws  Exception {
