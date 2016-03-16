@@ -27,7 +27,7 @@ import java.util.Scanner;
 
 public class UploadActivity extends AppCompatActivity {
 
-    private UploadHandler handler = new UploadHandler();
+    private UploadHandler2 handler = new UploadHandler2();
     ProgressDialog progressDialog;
 
     public UploadActivity() {
@@ -101,7 +101,7 @@ public class UploadActivity extends AppCompatActivity {
         protected Void doInBackground(EmailFileTuple... params) {
             String email = params[0].getEmail();
             File file  = params[0].getFile();
-            final UploadResult result = handler.uploadFile(email, file, progressDialog);
+            final UploadResult result = handler.uploadFile(email, file);
             if (!result.wasSuccessful()){
                 runOnUiThread(new Runnable() {
                     public void run() {

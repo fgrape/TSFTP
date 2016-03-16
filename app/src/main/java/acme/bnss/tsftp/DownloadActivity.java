@@ -34,7 +34,7 @@ import java.util.Scanner;
 
 public class DownloadActivity extends AppCompatActivity {
 
-    private DownloadHandler handler = new DownloadHandler();
+    private DownloadHandler2 handler = new DownloadHandler2();
     ProgressDialog progressDialog;
 
     @Override

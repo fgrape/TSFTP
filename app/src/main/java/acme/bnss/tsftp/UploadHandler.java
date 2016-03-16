@@ -100,7 +100,6 @@ public class UploadHandler {
             fileIn.close();
             temp = URLEncoder.encode(buff.toString("ISO8859-1"), "ISO8859-1");
             out.write(temp.getBytes(ISO8859_1));
-            Log.d("Data", "uppladdad data: " + new String(buff.toByteArray(), "ISO8859-1").substring(0, 50));
 
             printer.append("&fileName=");
             printer.append(file.getName());
@@ -178,17 +177,22 @@ public class UploadHandler {
     private void encryptKey(PublicKey publicKey, Key symmetricKey, OutputStream out) throws  Exception {
         out.write(symmetricKey.getEncoded());
         Cipher rsa = Cipher.getInstance("RSA");
-        rsa.init(Cipher.ENCRYPT_MODE, publicKey);
+        rsa.init(Cipher.WRAP_MODE, publicKey);
         byte[] key = symmetricKey.getEncoded();
+        // byte[] block = new byte[512];
+        // System.arraycopy(key, 0, block, 0, key.length);
         Log.d("NYCKEL", "Ursprungsnyckel är: " + new String(key, "ISO8859-1") + "    Längd = " + key.length);
         byte[] encrypted = rsa.doFinal(key);
+        Log.d("BLOCK", "Wrote this many bytes for symmetric key block: " + encrypted.length);
         out.write(encrypted);
         out.flush();
     }
 
     private SecretKey createSymmetricKey() throws NoSuchAlgorithmException {
         //return  new SecretKeySpec(new byte[]{0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15}, 0, 16, "AES");
-        return KeyGenerator.getInstance("AES").generateKey();
+        SecretKey key = KeyGenerator.getInstance("AES").generateKey();
+        Log.d("KEY", "Symmetric key byte length is: " + key.getEncoded().length);
+        return key;
     }
 
     private X509Certificate getCertificateFor(String email) throws Exception {

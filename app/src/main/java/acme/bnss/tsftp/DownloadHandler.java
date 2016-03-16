@@ -2,10 +2,12 @@ package acme.bnss.tsftp;
 
 import android.os.Environment;
 import android.util.Base64;
+import android.util.Base64InputStream;
 import android.util.Log;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.File;
@@ -13,6 +15,7 @@ import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.StringReader;
+import java.net.URLDecoder;
 import java.security.AlgorithmParameters;
 import java.security.Key;
 import java.security.KeyFactory;
@@ -53,21 +56,47 @@ public class DownloadHandler {
             String hash = fileDescriptor.getHash();
             String fileName = fileDescriptor.getFileName();
             Key symmetricKey = getSymmetricKey(hash);
-            //Key symmetricKey = new SecretKeySpec(new byte[]{0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15}, 0, 16, "AES");
-            Log.d("ABC", "We get here!!!!");
-            InputStream fileIn = getFileInputStream(symmetricKey, hash, fileName);
-            Log.d("ABC", "We get there!!!!");
-            writeFileToDisk(fileIn, fileName);
-            Log.d("ABC", "We get the whole way!!!!");
-            fileIn.close();
+            // InputStream fileIn = getFileInputStream(symmetricKey, hash, fileName);
+            // writeFileToDisk(fileIn, fileName);
+            // fileIn.close();
+            downloadAndDecryptFileAndWriteToDisk(symmetricKey, hash, fileName);
             return new DownloadResult(fileName);
         } catch (Exception e) {
             return DownloadResult.failure("Failed to acquire file from server: " + e.getMessage());
         }
     }
 
-    private void decryptFile(Key symmetricKey, InputStream in, OutputStream out) {
+    private void downloadAndDecryptFileAndWriteToDisk(Key key, String hash, String fileName) throws Exception {
+        String file = "tsftp.php?action=file&hash=" + hash + "&filename=" + fileName;
+        HttpsURLConnection connection = HTTPSConnectionHandler.getConnectionToACMEWebServer(file);
+        connection.setRequestMethod("GET");
+        connection.connect();
+        InputStream cipherIn = new BufferedInputStream(connection.getInputStream());
+        File fileOnDisk = new File(Environment.getExternalStoragePublicDirectory("TSFTP/Downloads"), fileName);
+        OutputStream fileOut = new BufferedOutputStream(new FileOutputStream(fileOnDisk));
+        decryptFile(key, cipherIn, fileOut);
+    }
 
+    private void decryptFile(Key symmetricKey, InputStream in, OutputStream out) throws Exception {
+        Cipher aes = Cipher.getInstance("AES/CBC/PKCS5Padding");
+        IvParameterSpec ivSpec = new IvParameterSpec(
+                "bnss1337bnss1337".getBytes("ISO8859-1"));
+        aes.init(Cipher.DECRYPT_MODE, symmetricKey, ivSpec);
+       // ByteArrayOutputStream inBuff = new ByteArrayOutputStream();
+        byte[] buff = new byte[512];
+        // for (int i; (i = in.read(buff)) != -1;) {
+//            inBuff.write(buff, 0, i);
+//        }
+//        String cipherString = new String(inBuff.toByteArray(), "ISO8859-1");
+//        String urlDecoded = URLDecoder.decode(cipherString, "ISO8859-1");
+//        InputStream cipherTextIn = new Base64InputStream(new ByteArrayInputStream(urlDecoded.getBytes("ISO8859-1")), Base64.DEFAULT);
+        CipherInputStream cipherIn = new CipherInputStream(in, aes);
+        for (int i; (i = cipherIn.read(buff)) != -1;) {
+            out.write(buff, 0, i);
+        }
+        cipherIn.close();
+        out.flush();
+        out.close();
     }
 
     private void writeFileToDisk(InputStream in, String fileName) throws Exception {
@@ -107,14 +136,15 @@ public class DownloadHandler {
         try {
             connection.connect();
             Key privateKey = getClientPrivateKey();
-            Cipher rsa = Cipher.getInstance("RSA");
+            Cipher rsa = Cipher.getInstance("RSA/ECB/NoPadding");
             rsa.init(Cipher.DECRYPT_MODE, privateKey);
             InputStream in = connection.getInputStream();
             byte[] block = new byte[512];
             int i = in.read(block);
+            Log.d("BLOCK", "Red this many bytes for symmetric key block: " + i);
             byte[] decrypted = rsa.doFinal(block);
             SecretKey symmetricKey = new SecretKeySpec(decrypted, 0, 24, "AES");
-            Log.d("NYCKEL", "Läst nyckel längd är: " + decrypted.length);
+            Log.d("NYCKEL", "Läst nyckel är: " + new String(decrypted, 0, 24, "ISO8859-1") + " Längd är " + decrypted.length);
             return symmetricKey;
         } finally {
             connection.disconnect();
