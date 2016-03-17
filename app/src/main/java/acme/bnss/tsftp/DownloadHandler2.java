@@ -138,7 +138,7 @@ public class DownloadHandler2 {
         return true;
     }
 
-    public String getSenderName() {
+    public String getSenderName(String fileID) {
 
         return "No Sender";
     }
