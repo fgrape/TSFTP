@@ -2,7 +2,6 @@ package acme.bnss.tsftp;
 
 import android.os.Environment;
 import android.util.Base64;
-import android.util.Base64InputStream;
 import android.util.Base64OutputStream;
 import android.util.Log;
 
@@ -14,27 +13,23 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
+
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.net.HttpURLConnection;
 import java.net.URLEncoder;
-import java.nio.charset.Charset;
-import java.security.KeyFactory;
-import java.security.KeyStore;
-import java.security.PrivateKey;
+import java.security.Principal;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
-import java.security.spec.PKCS8EncodedKeySpec;
+import java.util.BitSet;
 
 import javax.crypto.Cipher;
 import javax.crypto.CipherOutputStream;
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
-import javax.crypto.spec.SecretKeySpec;
 import javax.net.ssl.HttpsURLConnection;
 
 /**
@@ -42,73 +37,69 @@ import javax.net.ssl.HttpsURLConnection;
  */
 public class UploadHandler2 {
 
-    private String message;
-
     public UploadHandler2() {
 
     }
 
     public UploadResult uploadFile(String email, File file) {
-            X509Certificate receiverCert;
-            try {
-               receiverCert = getCertificateFor(email);
-            } catch (Exception e) {
-                return UploadResult.failure("Invalid recipient: " + email);
-            }
+        X509Certificate recipientCert;
         try {
-            verifyRecipientCert(receiverCert);
+            recipientCert = getCertificateFor(email);
         } catch (Exception e) {
-            return UploadResult.failure("Invalid recipiant: " + email);
+            Log.d("EXCEPTION", e.getMessage());
+            return UploadResult.failure("Invalid recipient: " + email);
+        }
+        try {
+            verifyRecipientCert(recipientCert);
+        } catch (Exception e) {
+            Log.d("EXCEPTION", e.getMessage());
+            return UploadResult.failure("Invalid recipient: " + email);
         }
         SecretKey secretKey;
         try {
             secretKey = generateSecretKey();
         } catch (Exception e) {
+            Log.d("EXCEPTION", e.getMessage());
             return UploadResult.failure("Internal error");
         }
         InputStream fileIn;
         try {
             fileIn = new BufferedInputStream(new FileInputStream(file));
         } catch (FileNotFoundException e) {
+            Log.d("EXCEPTION", e.getMessage());
             return UploadResult.failure("Could not read file: " + e.getMessage());
         }
         try {
-            TSFTPFileDescriptor fileDescriptor = doUpload(file.getName(), fileIn, receiverCert, secretKey);
+            TSFTPFileDescriptor fileDescriptor = doUpload(file.getName(), fileIn, recipientCert, secretKey);
             return new UploadResult(fileDescriptor);
         } catch (Exception e) {
-            Log.d("EXCEPTION", e.getCause().toString());
+            Log.d("EXCEPTION", e.getMessage());
             return UploadResult.failure("Failed to upload file: " + e.getMessage());
         }
     }
 
-    private TSFTPFileDescriptor doUpload(String fileName, InputStream fileInputStream, X509Certificate receiverCert, SecretKey secretKey) throws Exception {
-        HttpsURLConnection connection = HTTPSConnectionHandler.getConnectionToACMEWebServer("tsftp.php?action=upload");
+    private TSFTPFileDescriptor doUpload(String fileName, InputStream fileInputStream, X509Certificate recipientCert, SecretKey secretKey) throws Exception {
+        String file = "tsftp.php?action=upload";
+        HttpsURLConnection connection = HTTPSConnectionHandler.getConnectionToACMEWebServer(file);
         connection.setRequestMethod("POST");
         connection.setDoOutput(true);
-
+        connection.connect();
         OutputStream out = new BufferedOutputStream(connection.getOutputStream());
         PrintStream printer = new PrintStream(out);
 
-        printer.append("&fileName=");
+        printer.append("fileName=");
         printer.append(fileName);
 
         printer.append("&encryptionKey=");
-        ByteArrayOutputStream buff = new ByteArrayOutputStream();
-        OutputStream base64Out = new Base64OutputStream(buff, Base64.DEFAULT);
-        wrapSecretKey(secretKey, receiverCert, base64Out);
-        String urlEncoded = URLEncoder.encode(buff.toString("ISO8859-1"), "ISO8859-1");
-        out.write(urlEncoded.getBytes("ISO8859_1"));
-        out.flush();
+        printer.flush();
+        OutputStream hex = new HexOutputStream(out);
+        wrapSecretKey(secretKey, recipientCert, hex);
+        hex.flush();
 
-        printer.append("fileData=");
-        ByteArrayOutputStream buff2 = new ByteArrayOutputStream();
-        OutputStream base64Out2 = new Base64OutputStream(buff2, Base64.DEFAULT);
-        encrypt(secretKey, fileInputStream, base64Out2);
-        String urlEncoded2 = URLEncoder.encode(buff.toString("ISO8859-1"), "ISO8859-1");
-        out.write(urlEncoded2.getBytes("ISO8859_1"));
-
-        out.flush();
-        out.close();
+        printer.append("&fileData=");
+        printer.flush();
+        OutputStream hex2 = new HexOutputStream(out);
+        encrypt(secretKey, fileInputStream, hex2);
 
         if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
             throw new Exception("Failed to communicate with server");
@@ -116,6 +107,29 @@ public class UploadHandler2 {
         TSFTPFileDescriptor fileDescriptor = getFileDescriptor(connection.getInputStream());
         connection.disconnect();
         return fileDescriptor;
+    }
+
+    private X509Certificate getClientCert() throws Exception {
+        CertificateFactory factory = CertificateFactory.getInstance("X.509");
+        File certFile = new File(Environment.getExternalStorageDirectory(), "client-phone2.crt");
+        InputStream pemIn = new BufferedInputStream(new FileInputStream(new File("test.crt")));
+        InputStream certIn = new ByteArrayInputStream(PemReader.getBytesFromPem(pemIn));
+        X509Certificate cert = (X509Certificate) factory.generateCertificate(certIn);
+        return cert;
+    }
+
+    private String getSenderFromCert(X509Certificate cert) {
+        Principal principal = cert.getSubjectDN();
+
+        return null;
+    }
+
+    private void sender(X509Certificate cert, OutputStream out) {
+
+    }
+
+    private void signature(X509Certificate cert, InputStream in, OutputStream out) {
+
     }
 
     private void encrypt(SecretKey secretKey, InputStream in, OutputStream out) throws Exception {
@@ -135,6 +149,7 @@ public class UploadHandler2 {
         Cipher rsa = Cipher.getInstance("RSA");
         rsa.init(Cipher.WRAP_MODE, cert);
         byte[] cipherText = rsa.wrap(secretKey);
+        Log.d("SECRETKEY", "Length of secret key is: " + cipherText.length);
         out.write(cipherText);
         out.flush();
     }
@@ -156,12 +171,11 @@ public class UploadHandler2 {
         connection.setRequestMethod("GET");
         connection.connect();
         if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
-            message = "Failed to communicate with server";
-            return null;
+            throw new Exception("Failed to communicate with server");
         }
         InputStream in = new BufferedInputStream(connection.getInputStream());
+        InputStream certIn = new ByteArrayInputStream(PemReader.getBytesFromPem(in));
         CertificateFactory factory = CertificateFactory.getInstance("X.509");
-        InputStream certIn = new ByteArrayInputStream(getBytesFromPem(in));
         X509Certificate cert = (X509Certificate) factory.generateCertificate(certIn);
         in.close();
         return cert;
@@ -179,23 +193,6 @@ public class UploadHandler2 {
         KeyGenerator generator = KeyGenerator.getInstance("AES");
         SecretKey secretKey = generator.generateKey();
         return secretKey;
-    }
-
-    private byte[] getBytesFromPem(InputStream in) throws Exception {
-        Charset charset = Charset.forName("ISO8859-1");
-        BufferedReader reader = new BufferedReader(new InputStreamReader(in, charset));
-        ByteArrayOutputStream buff = new ByteArrayOutputStream();
-        reader.readLine();
-        String line = reader.readLine();
-        while (line != null) {
-            String nextLine = reader.readLine();
-            if (nextLine != null) {
-                buff.write(line.getBytes(charset));
-            }
-            line = nextLine;
-        }
-        byte[] bytes = Base64.decode(buff.toByteArray(), Base64.DEFAULT);
-        return bytes;
     }
 
 }
