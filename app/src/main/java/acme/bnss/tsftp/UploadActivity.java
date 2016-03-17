@@ -62,28 +62,18 @@ public class UploadActivity extends AppCompatActivity {
                     Toast toast = Toast.makeText(context, text, duration);
                     toast.show();
                 }
-
-
-
-                progressDialog.setOnCancelListener(new DialogInterface.OnCancelListener() {
-                    @Override
-                    public void onCancel(DialogInterface dialog) {
-                        uploadTask.cancel(true);
-                    }
-                });
             }
         });
 
         progressDialog = new ProgressDialog(UploadActivity.this);
-        progressDialog.setMessage("Uploading cat gifs!");
+        progressDialog.setMessage("Uploading file...");
         progressDialog.setIndeterminate(true);
         progressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
-        progressDialog.setCancelable(true);
+        progressDialog.setCancelable(false);
     }
 
     public void downloadView(View view){
         Intent intent = new Intent(this, DownloadActivity.class);
-        //Add trivial code
         startActivity(intent);
     }
 
@@ -105,7 +95,7 @@ public class UploadActivity extends AppCompatActivity {
             if (!result.wasSuccessful()){
                 runOnUiThread(new Runnable() {
                     public void run() {
-                        CharSequence text = "Didn't work yo check this error: " + result.getMessage();
+                        CharSequence text = "Could not upload file: " + result.getMessage();
                         int duration = Toast.LENGTH_LONG;
                         Toast toast = Toast.makeText(UploadActivity.this, text, duration);
                         toast.show();
@@ -113,9 +103,6 @@ public class UploadActivity extends AppCompatActivity {
                 });
             } else {
                 final String fileLink = result.getFileDescriptor().getFileLink();
-                String server = result.getFileDescriptor().getServer();
-                String hash = result.getFileDescriptor().getHash();
-                String fileName = result.getFileDescriptor().getFileName();
 
                 runOnUiThread(new Runnable() {
                     @Override

@@ -64,9 +64,10 @@ public class DownloadHandler2 {
         } catch (Exception e) {
             return DownloadResult.failure("Invalid file link");
         }
+        String fileName = null;
         try {
             String hash = descriptor.getHash();
-            String fileName = descriptor.getFileName();
+            fileName = descriptor.getFileName();
             SecretKey secretKey = getSecretKey(hash);
             File file = doDownload(secretKey, hash, fileName);
             InputStream fileIn = new BufferedInputStream(new FileInputStream(file));
@@ -77,8 +78,13 @@ public class DownloadHandler2 {
                 String msg = message != null ? ": " + message : "";
                 return DownloadResult.failure("Authentication failure" + msg);
             }
+            deleteFile(hash);
             return new DownloadResult(fileName);
         } catch (Exception e) {
+            if (fileName != null) {
+                File file = new File(Environment.getExternalStoragePublicDirectory("TSFTP/Downloads"), fileName);
+                deleteFileOnDisk(file);
+            }
             Log.d("EXCEPTION", e.getMessage());
             String msg = message != null ? ": " + message : "";
             return DownloadResult.failure("Failed to download file" + msg);
@@ -99,16 +105,13 @@ public class DownloadHandler2 {
         certificates.add(cert);
         CertPath certPath = factory.generateCertPath(certificates);
         CertPathValidator validator = CertPathValidator.getInstance("PKIX");
-        KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
-        keyStore.load(null);
         File caFile = new File(Environment.getExternalStorageDirectory(), "ca.crt");
         InputStream caCertIn = new BufferedInputStream(new FileInputStream(caFile));
         Certificate caCert = factory.generateCertificate(caCertIn);
         caCertIn.close();
+        KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
+        keyStore.load(null);
         keyStore.setCertificateEntry("ca", caCert);
-        // X509Certificate ca = (X509Certificate) keyStore.getCertificate("ca");
-        // Set<TrustAnchor> tas = new HashSet<>();
-        // tas.add(new TrustAnchor(ca, null));
         PKIXParameters params = new PKIXParameters(keyStore);
         params.setRevocationEnabled(false);
         validator.validate(certPath, params);
@@ -116,7 +119,7 @@ public class DownloadHandler2 {
     }
 
     private boolean verityAuthenticity(String hash, InputStream fileIn) throws Exception {
-        String senderName = "client-phone2";//getSenderName2(hash);
+        String senderName = getSenderName2(hash);
         X509Certificate senderCert = getCertificateFor(senderName);
         if (!verifySender(senderCert, senderName)) {
             message = "Sender not authenticated";
@@ -170,9 +173,8 @@ public class DownloadHandler2 {
             throw new Exception("Failed to communicate with server");
         }
         InputStream in = new BufferedInputStream(connection.getInputStream());
-        InputStream certIn = new ByteArrayInputStream(PemReader.getBytesFromPem(in));
         CertificateFactory factory = CertificateFactory.getInstance("X.509");
-        X509Certificate cert = (X509Certificate) factory.generateCertificate(certIn);
+        X509Certificate cert = (X509Certificate) factory.generateCertificate(in);
         in.close();
         return cert;
     }
@@ -181,6 +183,10 @@ public class DownloadHandler2 {
         String file = "tsftp.php?action=file&hash=" + hash + "&filename=" + fileName;
         HttpsURLConnection connection = HTTPSConnectionHandler.getConnectionToACMEWebServer(file);
         connection.setRequestMethod("GET");
+        connection.connect();
+        if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
+            throw new Exception("Failed to communicate with server");
+        }
         InputStream in = new BufferedInputStream(connection.getInputStream());
         InputStream hex = new HexInputStream(in);
         File fileOnDisk = new File(Environment.getExternalStoragePublicDirectory("TSFTP/Downloads"), fileName);
@@ -208,6 +214,9 @@ public class DownloadHandler2 {
         HttpsURLConnection connection = HTTPSConnectionHandler.getConnectionToACMEWebServer(file);
         connection.setRequestMethod("GET");
         connection.connect();
+        if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
+            throw new Exception("Failed to communicate with server");
+        }
         InputStream in = new BufferedInputStream(connection.getInputStream());
         InputStream hex = new HexInputStream(in);
         SecretKey secretKey = unwrapSecretKey(hex);
@@ -236,8 +245,8 @@ public class DownloadHandler2 {
         return privateKey;
     }
 
-    private boolean deleteFile(TSFTPFileDescriptor descriptor) {
-        String file = "tsftp.php?action=delete&hash=" + descriptor.getHash();
+    private boolean deleteFile(String hash) {
+        String file = "tsftp.php?action=delete&hash=" + hash;
         HttpsURLConnection connection = null;
         try {
             connection = HTTPSConnectionHandler.getConnectionToACMEWebServer(file);
@@ -246,10 +255,6 @@ public class DownloadHandler2 {
             connection.connect();
         } catch (Exception e) {
             return false;
-        } finally {
-            if (connection != null) {
-                connection.disconnect();
-            }
         }
         return true;
     }
@@ -259,6 +264,9 @@ public class DownloadHandler2 {
         HttpsURLConnection connection = HTTPSConnectionHandler.getConnectionToACMEWebServer(file);
         connection.setRequestMethod("GET");
         connection.connect();
+        if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
+            throw new Exception("Failed to communicate with server");
+        }
         InputStream in = new BufferedInputStream(connection.getInputStream());
         InputStream hex = new HexInputStream(in);
         byte[] buff = new byte[512];

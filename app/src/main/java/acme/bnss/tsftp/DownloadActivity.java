@@ -84,7 +84,7 @@ public class DownloadActivity extends AppCompatActivity {
         });
 
         progressDialog = new ProgressDialog(DownloadActivity.this);
-        progressDialog.setMessage("Downloading cat gifs!");
+        progressDialog.setMessage("Downloading file...");
         progressDialog.setIndeterminate(true);
         progressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
         progressDialog.setCancelable(true);
@@ -113,7 +113,7 @@ public class DownloadActivity extends AppCompatActivity {
             if (!result.wasSuccessfull()){
                 runOnUiThread(new Runnable() {
                     public void run() {
-                        CharSequence text = "Didn't work yo check this error: " + result.getMessage();
+                        CharSequence text = "File not downloaded: " + result.getMessage();
                         int duration = Toast.LENGTH_LONG;
                         Toast toast = Toast.makeText(DownloadActivity.this, text, duration);
                         toast.show();
@@ -123,7 +123,7 @@ public class DownloadActivity extends AppCompatActivity {
                 //Toast some stuff
                 runOnUiThread(new Runnable() {
                     public void run() {
-                        CharSequence text = "Cat gifs downloaded!: \n " + result.getFileName();
+                        CharSequence text = "File successfully downloaded:\n" + result.getFileName();
                         int duration = Toast.LENGTH_LONG;
                         Toast toast = Toast.makeText(DownloadActivity.this, text, duration);
                         toast.show();
@@ -163,12 +163,8 @@ public class DownloadActivity extends AppCompatActivity {
 
     private class GetSenderTask extends AsyncTask<String, Integer, Void> {
 
-        private Context context;
-        private PowerManager.WakeLock mWakeLock;
-
-
         public GetSenderTask(Context context) {
-            this.context = context;
+
         }
 
         @Override

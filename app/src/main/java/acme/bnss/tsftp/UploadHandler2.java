@@ -21,12 +21,18 @@ import java.io.PrintStream;
 import java.net.HttpURLConnection;
 import java.net.URLEncoder;
 import java.security.KeyFactory;
+import java.security.KeyStore;
 import java.security.Principal;
 import java.security.PrivateKey;
 import java.security.Signature;
+import java.security.cert.CertPath;
+import java.security.cert.CertPathValidator;
+import java.security.cert.Certificate;
 import java.security.cert.CertificateFactory;
+import java.security.cert.PKIXParameters;
 import java.security.cert.X509Certificate;
 import java.security.spec.PKCS8EncodedKeySpec;
+import java.util.ArrayList;
 import java.util.BitSet;
 
 import javax.crypto.Cipher;
@@ -150,19 +156,17 @@ public class UploadHandler2 {
     }
 
     private String getSenderNameFromCert(X509Certificate cert) throws Exception {
-        String principal =  cert.getSubjectDN().getName();
-        Log.d("PRINCIPAL", principal);
+        String principal = cert.getSubjectDN().getName();
         String[] split = principal.split(",");
-        String emailKeyValue = split[0];
-        String[] split2 = emailKeyValue.split("=");
-        String email = split2[1];
-        return email;
+        String temp = split[2];
+        String[] split2 = temp.split("=");
+        String name = split2[1];
+        return name;
     }
 
     private void writeSender(X509Certificate cert, OutputStream out) throws Exception {
-        String email = getSenderNameFromCert(cert);
-        Log.d("EMAIL", email);
-        byte[] bytes = email.getBytes("ISO8859-1");
+        String name = getSenderNameFromCert(cert);
+        byte[] bytes = name.getBytes("ISO8859-1");
         out.write(bytes);
     }
 
@@ -211,7 +215,21 @@ public class UploadHandler2 {
     }
 
     private void verifyRecipientCert(X509Certificate cert) throws Exception {
-
+        CertificateFactory factory = CertificateFactory.getInstance("X.509");
+        ArrayList<Certificate> certificates = new ArrayList<>();
+        certificates.add(cert);
+        CertPath certPath = factory.generateCertPath(certificates);
+        CertPathValidator validator = CertPathValidator.getInstance("PKIX");
+        File caFile = new File(Environment.getExternalStorageDirectory(), "ca.crt");
+        InputStream caCertIn = new BufferedInputStream(new FileInputStream(caFile));
+        Certificate caCert = factory.generateCertificate(caCertIn);
+        caCertIn.close();
+        KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
+        keyStore.load(null);
+        keyStore.setCertificateEntry("ca", caCert);
+        PKIXParameters params = new PKIXParameters(keyStore);
+        params.setRevocationEnabled(false);
+        validator.validate(certPath, params);
     }
 
     private TSFTPFileDescriptor getFileDescriptor(InputStream in) throws Exception {
@@ -230,9 +248,8 @@ public class UploadHandler2 {
             throw new Exception("Failed to communicate with server");
         }
         InputStream in = new BufferedInputStream(connection.getInputStream());
-        InputStream certIn = new ByteArrayInputStream(PemReader.getBytesFromPem(in));
         CertificateFactory factory = CertificateFactory.getInstance("X.509");
-        X509Certificate cert = (X509Certificate) factory.generateCertificate(certIn);
+        X509Certificate cert = (X509Certificate) factory.generateCertificate(in);
         in.close();
         return cert;
     }
