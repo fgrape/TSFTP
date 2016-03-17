@@ -138,4 +138,9 @@ public class DownloadHandler2 {
         return true;
     }
 
+    public String getSenderName() {
+
+        return "No Sender";
+    }
+
 }
