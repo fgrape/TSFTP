@@ -20,9 +20,13 @@ import java.io.OutputStream;
 import java.io.PrintStream;
 import java.net.HttpURLConnection;
 import java.net.URLEncoder;
+import java.security.KeyFactory;
 import java.security.Principal;
+import java.security.PrivateKey;
+import java.security.Signature;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
+import java.security.spec.PKCS8EncodedKeySpec;
 import java.util.BitSet;
 
 import javax.crypto.Cipher;
@@ -42,6 +46,20 @@ public class UploadHandler2 {
     }
 
     public UploadResult uploadFile(String email, File file) {
+        X509Certificate clientCert;
+        try {
+            clientCert = getClientCert();
+        } catch (Exception e) {
+            Log.d("EXCEPTION", e.getMessage());
+            return UploadResult.failure("You are not authenticated 1");
+        }
+        PrivateKey clientPrivateKey;
+        try {
+            clientPrivateKey = getClientPrivateKey();
+        } catch (Exception e) {
+            Log.d("EXCEPTION", e.getMessage());
+            return UploadResult.failure("You are not authenticated 2");
+        }
         X509Certificate recipientCert;
         try {
             recipientCert = getCertificateFor(email);
@@ -62,15 +80,17 @@ public class UploadHandler2 {
             Log.d("EXCEPTION", e.getMessage());
             return UploadResult.failure("Internal error");
         }
-        InputStream fileIn;
+        InputStream fileIn1;
+        InputStream fileIn2;
         try {
-            fileIn = new BufferedInputStream(new FileInputStream(file));
+            fileIn1 = new BufferedInputStream(new FileInputStream(file));
+            fileIn2 = new BufferedInputStream(new FileInputStream(file));
         } catch (FileNotFoundException e) {
             Log.d("EXCEPTION", e.getMessage());
             return UploadResult.failure("Could not read file: " + e.getMessage());
         }
         try {
-            TSFTPFileDescriptor fileDescriptor = doUpload(file.getName(), fileIn, recipientCert, secretKey);
+            TSFTPFileDescriptor fileDescriptor = doUpload(file.getName(), fileIn1, recipientCert, secretKey, clientCert, clientPrivateKey, fileIn2);
             return new UploadResult(fileDescriptor);
         } catch (Exception e) {
             Log.d("EXCEPTION", e.getMessage());
@@ -78,7 +98,7 @@ public class UploadHandler2 {
         }
     }
 
-    private TSFTPFileDescriptor doUpload(String fileName, InputStream fileInputStream, X509Certificate recipientCert, SecretKey secretKey) throws Exception {
+    private TSFTPFileDescriptor doUpload(String fileName, InputStream fileIn1, X509Certificate recipientCert, SecretKey secretKey, X509Certificate clientCert, PrivateKey clientPrivateKey, InputStream fileIn2) throws Exception {
         String file = "tsftp.php?action=upload";
         HttpsURLConnection connection = HTTPSConnectionHandler.getConnectionToACMEWebServer(file);
         connection.setRequestMethod("POST");
@@ -96,10 +116,22 @@ public class UploadHandler2 {
         wrapSecretKey(secretKey, recipientCert, hex);
         hex.flush();
 
-        printer.append("&fileData=");
+        printer.append("&sender=");
         printer.flush();
         OutputStream hex2 = new HexOutputStream(out);
-        encrypt(secretKey, fileInputStream, hex2);
+        writeSender(clientCert, hex2);
+        hex2.flush();
+
+        printer.append("&signature=");
+        printer.flush();
+        OutputStream hex3 = new HexOutputStream(out);
+        writeSignature(clientPrivateKey, fileIn2, hex3);
+        hex3.flush();
+
+        printer.append("&fileData=");
+        printer.flush();
+        OutputStream hex4 = new HexOutputStream(out);
+        encrypt(secretKey, fileIn1, hex4);
 
         if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
             throw new Exception("Failed to communicate with server");
@@ -112,22 +144,38 @@ public class UploadHandler2 {
     private X509Certificate getClientCert() throws Exception {
         CertificateFactory factory = CertificateFactory.getInstance("X.509");
         File certFile = new File(Environment.getExternalStorageDirectory(), "client-phone2.crt");
-        InputStream pemIn = new BufferedInputStream(new FileInputStream(new File("test.crt")));
-        InputStream certIn = new ByteArrayInputStream(PemReader.getBytesFromPem(pemIn));
+        InputStream certIn = new BufferedInputStream(new FileInputStream(certFile));
         X509Certificate cert = (X509Certificate) factory.generateCertificate(certIn);
         return cert;
     }
 
-    private String getSenderFromCert(X509Certificate cert) {
-        return cert.getSubjectDN().getName();
+    private String getSenderNameFromCert(X509Certificate cert) throws Exception {
+        String principal =  cert.getSubjectDN().getName();
+        Log.d("PRINCIPAL", principal);
+        String[] split = principal.split(",");
+        String emailKeyValue = split[0];
+        String[] split2 = emailKeyValue.split("=");
+        String email = split2[1];
+        return email;
     }
 
-    private void sender(X509Certificate cert, OutputStream out) {
-
+    private void writeSender(X509Certificate cert, OutputStream out) throws Exception {
+        String email = getSenderNameFromCert(cert);
+        Log.d("EMAIL", email);
+        byte[] bytes = email.getBytes("ISO8859-1");
+        out.write(bytes);
     }
 
-    private void signature(X509Certificate cert, InputStream in, OutputStream out) {
-
+    private void writeSignature(PrivateKey privateKey, InputStream in, OutputStream out) throws Exception {
+        Signature signature = Signature.getInstance("SHA256withRSA");
+        signature.initSign(privateKey);
+        byte[] buff = new byte[512];
+        for (int i; (i = in.read(buff)) != -1; ) {
+            signature.update(buff, 0, i);
+        }
+        in.close();
+        byte[] sig = signature.sign();
+        out.write(sig);
     }
 
     private void encrypt(SecretKey secretKey, InputStream in, OutputStream out) throws Exception {
@@ -147,9 +195,19 @@ public class UploadHandler2 {
         Cipher rsa = Cipher.getInstance("RSA");
         rsa.init(Cipher.WRAP_MODE, cert);
         byte[] cipherText = rsa.wrap(secretKey);
-        Log.d("SECRETKEY", "Length of secret key is: " + cipherText.length);
         out.write(cipherText);
         out.flush();
+    }
+
+    private PrivateKey getClientPrivateKey() throws Exception {
+        File file = new File(Environment.getExternalStorageDirectory(), "client-phone2.key");
+        BufferedInputStream in = new BufferedInputStream(new FileInputStream(file));
+        byte[] keyBytes = PemReader.getBytesFromPem(in);
+        in.close();
+        PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(keyBytes);
+        KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+        PrivateKey privateKey = keyFactory.generatePrivate(keySpec);
+        return privateKey;
     }
 
     private void verifyRecipientCert(X509Certificate cert) throws Exception {

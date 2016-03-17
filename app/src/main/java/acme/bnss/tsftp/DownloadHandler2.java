@@ -16,15 +16,28 @@ import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.net.HttpURLConnection;
 import java.net.URLDecoder;
 import java.nio.charset.Charset;
+import java.security.Signature;
+import java.security.cert.CertPath;
+import java.security.cert.CertPathValidator;
+import java.security.cert.CertPathValidatorResult;
+import java.security.cert.Certificate;
 import java.security.Key;
 import java.security.KeyFactory;
 import java.security.KeyStore;
 import java.security.PrivateKey;
+import java.security.cert.CertificateFactory;
+import java.security.cert.PKIXCertPathValidatorResult;
+import java.security.cert.PKIXParameters;
+import java.security.cert.TrustAnchor;
 import java.security.cert.X509Certificate;
 import java.security.spec.PKCS8EncodedKeySpec;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 
 import javax.crypto.Cipher;
 import javax.crypto.CipherInputStream;
@@ -37,6 +50,8 @@ import javax.net.ssl.HttpsURLConnection;
  * Created by Erik Borgstrom on 2016-03-16.
  */
 public class DownloadHandler2 {
+
+    private String message;
 
     public DownloadHandler2() {
 
@@ -53,15 +68,116 @@ public class DownloadHandler2 {
             String hash = descriptor.getHash();
             String fileName = descriptor.getFileName();
             SecretKey secretKey = getSecretKey(hash);
-            doDownload(secretKey, hash, fileName);
+            File file = doDownload(secretKey, hash, fileName);
+            InputStream fileIn = new BufferedInputStream(new FileInputStream(file));
+            boolean auth = verityAuthenticity(hash, fileIn);
+            fileIn.close();
+            if (!auth) {
+                deleteFileOnDisk(file);
+                String msg = message != null ? ": " + message : "";
+                return DownloadResult.failure("Authentication failure" + msg);
+            }
             return new DownloadResult(fileName);
         } catch (Exception e) {
             Log.d("EXCEPTION", e.getMessage());
-            return DownloadResult.failure("Failed to download file");
+            String msg = message != null ? ": " + message : "";
+            return DownloadResult.failure("Failed to download file" + msg);
         }
     }
 
-    private void doDownload(SecretKey secretKey, String hash, String fileName) throws Exception {
+    private void deleteFileOnDisk(File file) {
+        file.delete();
+    }
+
+    private boolean verifySender(X509Certificate cert, String senderName) throws Exception {
+        String certSenderName = getSenderNameFromCert(cert);
+        if (!senderName.equalsIgnoreCase(certSenderName)) {
+            // return false;
+        }
+        CertificateFactory factory = CertificateFactory.getInstance("X.509");
+        ArrayList<Certificate> certificates = new ArrayList<>();
+        certificates.add(cert);
+        CertPath certPath = factory.generateCertPath(certificates);
+        CertPathValidator validator = CertPathValidator.getInstance("PKIX");
+        KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
+        keyStore.load(null);
+        File caFile = new File(Environment.getExternalStorageDirectory(), "ca.crt");
+        InputStream caCertIn = new BufferedInputStream(new FileInputStream(caFile));
+        Certificate caCert = factory.generateCertificate(caCertIn);
+        caCertIn.close();
+        keyStore.setCertificateEntry("ca", caCert);
+        // X509Certificate ca = (X509Certificate) keyStore.getCertificate("ca");
+        // Set<TrustAnchor> tas = new HashSet<>();
+        // tas.add(new TrustAnchor(ca, null));
+        PKIXParameters params = new PKIXParameters(keyStore);
+        params.setRevocationEnabled(false);
+        validator.validate(certPath, params);
+        return true;
+    }
+
+    private boolean verityAuthenticity(String hash, InputStream fileIn) throws Exception {
+        String senderName = "client-phone2";//getSenderName2(hash);
+        X509Certificate senderCert = getCertificateFor(senderName);
+        if (!verifySender(senderCert, senderName)) {
+            message = "Sender not authenticated";
+            return false;
+        }
+        byte[] sig = getSignature(hash);
+        Signature signature = Signature.getInstance("SHA256withRSA");
+        signature.initVerify(senderCert);
+        byte[] buff = new byte[512];
+        for (int i; (i = fileIn.read(buff)) != -1; ) {
+            signature.update(buff, 0, i);
+        }
+        fileIn.close();
+        boolean sigValid = signature.verify(sig);
+        return sigValid;
+    }
+
+    private byte[] getSignature(String hash) throws Exception {
+        String file = "tsftp.php?action=sig&hash=" + hash;
+        HttpsURLConnection connection = HTTPSConnectionHandler.getConnectionToACMEWebServer(file);
+        connection.setRequestMethod("GET");
+        connection.connect();
+        if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
+            throw new Exception("Failed to communicate with server");
+        }
+        InputStream in = new BufferedInputStream(connection.getInputStream());
+        InputStream hex = new HexInputStream(in);
+        byte[] buff = new byte[4096];
+        int len = hex.read(buff);
+        connection.disconnect();
+        byte[] sig = Arrays.copyOf(buff, len);
+        return sig;
+    }
+
+    private String getSenderNameFromCert(X509Certificate cert) throws Exception {
+        String principal =  cert.getSubjectDN().getName();
+        Log.d("PRINCIPAL", principal);
+        String[] split = principal.split(",");
+        String emailKeyValue = split[0];
+        String[] split2 = emailKeyValue.split("=");
+        String email = split2[1];
+        return email;
+    }
+
+    private X509Certificate getCertificateFor(String email) throws Exception {
+        String file = "tsftp.php?action=cert&user=" + getUser(email);
+        HttpsURLConnection connection = HTTPSConnectionHandler.getConnectionToACMEWebServer(file);
+        connection.setRequestMethod("GET");
+        connection.connect();
+        if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
+            throw new Exception("Failed to communicate with server");
+        }
+        InputStream in = new BufferedInputStream(connection.getInputStream());
+        InputStream certIn = new ByteArrayInputStream(PemReader.getBytesFromPem(in));
+        CertificateFactory factory = CertificateFactory.getInstance("X.509");
+        X509Certificate cert = (X509Certificate) factory.generateCertificate(certIn);
+        in.close();
+        return cert;
+    }
+
+    private File doDownload(SecretKey secretKey, String hash, String fileName) throws Exception {
         String file = "tsftp.php?action=file&hash=" + hash + "&filename=" + fileName;
         HttpsURLConnection connection = HTTPSConnectionHandler.getConnectionToACMEWebServer(file);
         connection.setRequestMethod("GET");
@@ -72,6 +188,7 @@ public class DownloadHandler2 {
         decrypt(secretKey, hex, out);
         out.flush();
         out.close();
+        return fileOnDisk;
     }
 
     private void decrypt(SecretKey secretKey, InputStream in, OutputStream out) throws Exception {
@@ -112,7 +229,6 @@ public class DownloadHandler2 {
         File file = new File(Environment.getExternalStorageDirectory(), "client-phone2.key");
         BufferedInputStream in = new BufferedInputStream(new FileInputStream(file));
         byte[] keyBytes = PemReader.getBytesFromPem(in);
-        Log.d("KEY" , "Private key length:" + keyBytes.length);
         in.close();
         PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(keyBytes);
         KeyFactory keyFactory = KeyFactory.getInstance("RSA");
@@ -163,6 +279,14 @@ public class DownloadHandler2 {
             return getSenderName2(descriptor.getHash());
         } catch (Exception e) {
             return "Failed to get sender";
+        }
+    }
+
+    private String getUser(String email) {
+        if (email.contains("@")) {
+            return email.split("@")[0];
+        } else {
+            return email;
         }
     }
 
