@@ -46,7 +46,9 @@
         android:id="@+id/getSenderIDButton"
         android:layout_above="@+id/downloadButton"
         android:layout_alignParentStart="true"
-        android:background="#7994f3" />
+        android:background="#f379a7"
+        android:layout_alignEnd="@+id/downloadButton"
+        android:backgroundTint="#79c94343" />
 
     <TextView
         android:layout_width="wrap_content"
