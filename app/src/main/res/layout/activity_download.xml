@@ -38,4 +38,22 @@
         android:layout_alignParentStart="true"
         android:layout_alignParentEnd="true"
         android:background="#497ef0" />
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Get Sender ID"
+        android:id="@+id/getSenderIDButton"
+        android:layout_above="@+id/downloadButton"
+        android:layout_alignParentStart="true"
+        android:background="#7994f3" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textAppearance="?android:attr/textAppearanceMedium"
+        android:id="@+id/senderIDText"
+        android:layout_above="@+id/getSenderIDButton"
+        android:layout_centerHorizontal="true"
+        android:layout_marginBottom="69dp" />
 </RelativeLayout>

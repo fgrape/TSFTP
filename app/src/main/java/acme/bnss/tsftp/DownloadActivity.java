@@ -42,6 +42,18 @@ public class DownloadActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_download);
 
+        Button getSenderButton = (Button) findViewById(R.id.getSenderIDButton);
+        getSenderButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                // execute this when the downloader must be fired
+                final GetSenderTask getSenderTask = new GetSenderTask(DownloadActivity.this);
+                EditText fileIDET = (EditText)findViewById(R.id.fileIDField);
+                String fileID = fileIDET.getText().toString();
+                getSenderTask.execute(fileID);
+            }
+        });
+
         Button downloadButton = (Button) findViewById(R.id.downloadButton);
         downloadButton.setOnClickListener(new View.OnClickListener() {
 
@@ -61,8 +73,6 @@ public class DownloadActivity extends AppCompatActivity {
                     Toast toast = Toast.makeText(context, text, duration);
                     toast.show();
                 }
-
-
 
                 progressDialog.setOnCancelListener(new DialogInterface.OnCancelListener() {
                     @Override
@@ -150,5 +160,33 @@ public class DownloadActivity extends AppCompatActivity {
         }
         return false;
     }
+
+    private class GetSenderTask extends AsyncTask<String, Integer, Void> {
+
+        private Context context;
+        private PowerManager.WakeLock mWakeLock;
+
+
+        public GetSenderTask(Context context) {
+            this.context = context;
+        }
+
+        @Override
+        protected Void doInBackground(String... params) {
+            String fileID = params[0];
+            final String senderName = handler.getSenderName(fileID);
+            //SenderIDText
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    TextView resultText = (TextView)findViewById(R.id.senderIDText);
+                    resultText.setText(senderName);
+                }
+            });
+            return null;
+        }
+    }
+
+
 
 }
