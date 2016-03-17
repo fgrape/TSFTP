@@ -64,26 +64,24 @@ public class DownloadHandler2 {
         } catch (Exception e) {
             return DownloadResult.failure("Invalid file link");
         }
-        String fileName = null;
+        File fileOnDisk = null;
         try {
             String hash = descriptor.getHash();
-            fileName = descriptor.getFileName();
+            String fileName = descriptor.getFileName();
             SecretKey secretKey = getSecretKey(hash);
-            File file = doDownload(secretKey, hash, fileName);
-            InputStream fileIn = new BufferedInputStream(new FileInputStream(file));
-            boolean auth = verityAuthenticity(hash, fileIn);
-            fileIn.close();
+            fileOnDisk = new File(Environment.getExternalStoragePublicDirectory("TSFTP/Downloads"), fileName);
+            doDownload(secretKey, hash, fileName, fileOnDisk);
+            boolean auth = verityAuthenticity(hash, fileOnDisk);
             if (!auth) {
-                deleteFileOnDisk(file);
+                deleteFileOnDisk(fileOnDisk);
                 String msg = message != null ? ": " + message : "";
                 return DownloadResult.failure("Authentication failure" + msg);
             }
             deleteFile(hash);
             return new DownloadResult(fileName);
         } catch (Exception e) {
-            if (fileName != null) {
-                File file = new File(Environment.getExternalStoragePublicDirectory("TSFTP/Downloads"), fileName);
-                deleteFileOnDisk(file);
+            if (fileOnDisk != null) {
+                deleteFileOnDisk(fileOnDisk);
             }
             Log.d("EXCEPTION", e.getMessage());
             String msg = message != null ? ": " + message : "";
@@ -118,7 +116,7 @@ public class DownloadHandler2 {
         return true;
     }
 
-    private boolean verityAuthenticity(String hash, InputStream fileIn) throws Exception {
+    private boolean verityAuthenticity(String hash, File file) throws Exception {
         String senderName = getSenderName2(hash);
         X509Certificate senderCert = getCertificateFor(senderName);
         if (!verifySender(senderCert, senderName)) {
@@ -128,6 +126,7 @@ public class DownloadHandler2 {
         byte[] sig = getSignature(hash);
         Signature signature = Signature.getInstance("SHA256withRSA");
         signature.initVerify(senderCert);
+        InputStream fileIn = new BufferedInputStream(new FileInputStream(file));
         byte[] buff = new byte[512];
         for (int i; (i = fileIn.read(buff)) != -1; ) {
             signature.update(buff, 0, i);
@@ -155,13 +154,12 @@ public class DownloadHandler2 {
     }
 
     private String getSenderNameFromCert(X509Certificate cert) throws Exception {
-        String principal =  cert.getSubjectDN().getName();
-        Log.d("PRINCIPAL", principal);
+        String principal = cert.getSubjectDN().getName();
         String[] split = principal.split(",");
-        String emailKeyValue = split[0];
-        String[] split2 = emailKeyValue.split("=");
-        String email = split2[1];
-        return email;
+        String temp = split[2];
+        String[] split2 = temp.split("=");
+        String name = split2[1];
+        return name;
     }
 
     private X509Certificate getCertificateFor(String email) throws Exception {
@@ -172,14 +170,14 @@ public class DownloadHandler2 {
         if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
             throw new Exception("Failed to communicate with server");
         }
-        InputStream in = new BufferedInputStream(connection.getInputStream());
         CertificateFactory factory = CertificateFactory.getInstance("X.509");
+        InputStream in = new BufferedInputStream(connection.getInputStream());
         X509Certificate cert = (X509Certificate) factory.generateCertificate(in);
         in.close();
         return cert;
     }
 
-    private File doDownload(SecretKey secretKey, String hash, String fileName) throws Exception {
+    private void doDownload(SecretKey secretKey, String hash, String fileName, File fileOnDisk) throws Exception {
         String file = "tsftp.php?action=file&hash=" + hash + "&filename=" + fileName;
         HttpsURLConnection connection = HTTPSConnectionHandler.getConnectionToACMEWebServer(file);
         connection.setRequestMethod("GET");
@@ -189,12 +187,11 @@ public class DownloadHandler2 {
         }
         InputStream in = new BufferedInputStream(connection.getInputStream());
         InputStream hex = new HexInputStream(in);
-        File fileOnDisk = new File(Environment.getExternalStoragePublicDirectory("TSFTP/Downloads"), fileName);
         OutputStream out = new BufferedOutputStream(new FileOutputStream(fileOnDisk));
         decrypt(secretKey, hex, out);
         out.flush();
         out.close();
-        return fileOnDisk;
+        connection.disconnect();
     }
 
     private void decrypt(SecretKey secretKey, InputStream in, OutputStream out) throws Exception {
@@ -247,7 +244,7 @@ public class DownloadHandler2 {
 
     private boolean deleteFile(String hash) {
         String file = "tsftp.php?action=delete&hash=" + hash;
-        HttpsURLConnection connection = null;
+        HttpsURLConnection connection;
         try {
             connection = HTTPSConnectionHandler.getConnectionToACMEWebServer(file);
             connection.setRequestMethod("POST");

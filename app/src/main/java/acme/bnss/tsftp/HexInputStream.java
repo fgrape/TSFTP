@@ -11,7 +11,6 @@ public class HexInputStream extends FilterInputStream {
 
     public HexInputStream(InputStream in) {
         super(in);
-
     }
 
     @Override
