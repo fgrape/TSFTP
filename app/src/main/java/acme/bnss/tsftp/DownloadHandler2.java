@@ -138,9 +138,32 @@ public class DownloadHandler2 {
         return true;
     }
 
-    public String getSenderName(String fileID) {
+    private String getSenderName2(String hash) throws Exception {
+        String file = "tsftp.php?action=sender&hash=" + hash;
+        HttpsURLConnection connection = HTTPSConnectionHandler.getConnectionToACMEWebServer(file);
+        connection.setRequestMethod("GET");
+        connection.connect();
+        InputStream in = new BufferedInputStream(connection.getInputStream());
+        InputStream hex = new HexInputStream(in);
+        byte[] buff = new byte[512];
+        int len = hex.read(buff);
+        connection.disconnect();
+        String sender = new String(buff, 0, len, "ISO8859-1");
+        return sender;
+    }
 
-        return "No Sender";
+    public String getSenderName(String fileLink) {
+        TSFTPFileDescriptor descriptor;
+        try {
+            descriptor = new TSFTPFileDescriptor(fileLink);
+        } catch (Exception e) {
+            return "Invalid file link";
+        }
+        try {
+            return getSenderName2(descriptor.getHash());
+        } catch (Exception e) {
+            return "Failed to get sender";
+        }
     }
 
 }

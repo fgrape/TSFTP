@@ -119,9 +119,7 @@ public class UploadHandler2 {
     }
 
     private String getSenderFromCert(X509Certificate cert) {
-        Principal principal = cert.getSubjectDN();
-
-        return null;
+        return cert.getSubjectDN().getName();
     }
 
     private void sender(X509Certificate cert, OutputStream out) {
