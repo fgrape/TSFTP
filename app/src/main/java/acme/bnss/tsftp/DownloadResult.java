@@ -2,21 +2,21 @@ package acme.bnss.tsftp;
 
 public class DownloadResult {
 
-    private boolean successfull;
+    private boolean successful;
     private String message;
     private String fileName;
 
-    public DownloadResult() {
+    private DownloadResult() {
 
     }
 
     public DownloadResult(String fileName) {
         this.fileName = fileName;
-        successfull = true;
+        successful = true;
     }
 
-    public boolean wasSuccessfull() {
-        return successfull;
+    public boolean wasSuccessful() {
+        return successful;
     }
 
     public String getMessage() {
@@ -29,7 +29,7 @@ public class DownloadResult {
 
     public static DownloadResult failure(String message) {
         DownloadResult result = new DownloadResult();
-        result.successfull = false;
+        result.successful = false;
         result.message = message;
         return result;
     }

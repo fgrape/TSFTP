@@ -28,7 +28,7 @@ import java.util.Scanner;
 public class UploadActivity extends AppCompatActivity {
 
     private UploadHandler2 handler = new UploadHandler2();
-    ProgressDialog progressDialog;
+    private ProgressDialog progressDialog;
 
     public UploadActivity() {
 
@@ -44,18 +44,16 @@ public class UploadActivity extends AppCompatActivity {
 
             @Override
             public void onClick(View view) {
-                // execute this when the downloader must be fired
                 final UploadTask uploadTask = new UploadTask(UploadActivity.this);
-                EditText emailET = (EditText)findViewById(R.id.receiverEmailField);
+                EditText emailET = (EditText) findViewById(R.id.receiverEmailField);
                 String email = emailET.getText().toString();
 
-                EditText fileET = (EditText)findViewById(R.id.fileField);
+                EditText fileET = (EditText) findViewById(R.id.fileField);
                 String fileString = fileET.getText().toString();
                 if (isExternalStorageWritable()) {
                     File file = new File(Environment.getExternalStoragePublicDirectory("TSFTP"), fileString);
                     uploadTask.execute(new EmailFileTuple(email, file));
-                }
-                else {
+                } else {
                     Context context = getApplicationContext();
                     CharSequence text = "Cannot access SD Card memory";
                     int duration = Toast.LENGTH_LONG;
@@ -103,7 +101,6 @@ public class UploadActivity extends AppCompatActivity {
                 });
             } else {
                 final String fileLink = result.getFileDescriptor().getFileLink();
-
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
@@ -112,22 +109,20 @@ public class UploadActivity extends AppCompatActivity {
                     }
                 });
             }
-
-
-
             return null;
         }
+
         @Override
         protected void onPreExecute() {
             super.onPreExecute();
             // take CPU lock to prevent CPU from going off if the user
             // presses the power button during download
             PowerManager pm = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
-            mWakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,
-                    getClass().getName());
+            mWakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, getClass().getName());
             mWakeLock.acquire();
             progressDialog.show();
         }
+
         @Override
         protected void onPostExecute(Void v) {
             mWakeLock.release();
@@ -135,15 +130,13 @@ public class UploadActivity extends AppCompatActivity {
         }
 
     }
-    public boolean isExternalStorageWritable() {
+
+    private boolean isExternalStorageWritable() {
         String state = Environment.getExternalStorageState();
         if (Environment.MEDIA_MOUNTED.equals(state)) {
             return true;
         }
         return false;
     }
-
-
-
 
 }

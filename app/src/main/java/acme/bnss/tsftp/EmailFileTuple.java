@@ -3,6 +3,7 @@ package acme.bnss.tsftp;
 import java.io.File;
 
 public class EmailFileTuple {
+
     private String email;
     private File file;
 
@@ -14,6 +15,7 @@ public class EmailFileTuple {
     public String getEmail() {
         return email;
     }
+
     public File getFile() {
         return file;
     }

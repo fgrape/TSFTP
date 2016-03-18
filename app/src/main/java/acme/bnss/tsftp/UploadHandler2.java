@@ -37,10 +37,6 @@ import javax.net.ssl.HttpsURLConnection;
 
 public class UploadHandler2 {
 
-    public UploadHandler2() {
-
-    }
-
     public UploadResult uploadFile(String email, File file) {
         X509Certificate clientCert;
         try {
@@ -196,7 +192,7 @@ public class UploadHandler2 {
     private PrivateKey getClientPrivateKey() throws Exception {
         File file = new File(Environment.getExternalStorageDirectory(), "client.key");
         BufferedInputStream in = new BufferedInputStream(new FileInputStream(file));
-        byte[] keyBytes = PKCS8Reader.getBytesFromPem(in);
+        byte[] keyBytes = PKCS8Reader.getBytes(in);
         in.close();
         PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(keyBytes);
         KeyFactory keyFactory = KeyFactory.getInstance("RSA");
@@ -219,7 +215,7 @@ public class UploadHandler2 {
         keyStore.setCertificateEntry("ca", caCert);
         PKIXParameters params = new PKIXParameters(keyStore);
         params.setRevocationEnabled(false);
-        validator.validate(certPath, params);
+        validator.validate(certPath, params); // Throws exception if not validated.
     }
 
     private TSFTPFileDescriptor getFileDescriptor(InputStream in) throws Exception {

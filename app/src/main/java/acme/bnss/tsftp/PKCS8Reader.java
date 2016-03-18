@@ -10,7 +10,7 @@ import java.nio.charset.Charset;
 
 public class PKCS8Reader {
 
-    public static byte[] getBytesFromPem(InputStream in) throws Exception {
+    public static byte[] getBytes(InputStream in) throws Exception {
         Charset charset = Charset.forName("ISO8859-1");
         BufferedReader reader = new BufferedReader(new InputStreamReader(in, charset));
         ByteArrayOutputStream buff = new ByteArrayOutputStream();

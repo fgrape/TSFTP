@@ -35,10 +35,6 @@ public class DownloadHandler2 {
 
     private String message;
 
-    public DownloadHandler2() {
-
-    }
-
     public DownloadResult downloadFile(String fileLink) {
         TSFTPFileDescriptor descriptor;
         try {
@@ -94,7 +90,7 @@ public class DownloadHandler2 {
         keyStore.setCertificateEntry("ca", caCert);
         PKIXParameters params = new PKIXParameters(keyStore);
         params.setRevocationEnabled(false);
-        validator.validate(certPath, params);
+        validator.validate(certPath, params); // Throws exception if not validated.
         return true;
     }
 
@@ -216,7 +212,7 @@ public class DownloadHandler2 {
     private PrivateKey getClientPrivateKey() throws Exception {
         File file = new File(Environment.getExternalStorageDirectory(), "client.key");
         BufferedInputStream in = new BufferedInputStream(new FileInputStream(file));
-        byte[] keyBytes = PKCS8Reader.getBytesFromPem(in);
+        byte[] keyBytes = PKCS8Reader.getBytes(in);
         in.close();
         PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(keyBytes);
         KeyFactory keyFactory = KeyFactory.getInstance("RSA");
