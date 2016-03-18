@@ -4,9 +4,6 @@ import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 
-/**
- * Created by Erik Borgstrom on 2016-03-17.
- */
 public class HexOutputStream extends FilterOutputStream {
 
     private byte[] hex;

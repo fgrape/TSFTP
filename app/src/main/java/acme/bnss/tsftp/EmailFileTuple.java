@@ -2,9 +2,6 @@ package acme.bnss.tsftp;
 
 import java.io.File;
 
-/**
- * Created by Marcus on 2016-03-10.
- */
 public class EmailFileTuple {
     private String email;
     private File file;

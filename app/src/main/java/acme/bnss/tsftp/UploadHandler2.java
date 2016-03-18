@@ -1,15 +1,11 @@
 package acme.bnss.tsftp;
 
 import android.os.Environment;
-import android.util.Base64;
-import android.util.Base64OutputStream;
 import android.util.Log;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -19,10 +15,8 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.net.HttpURLConnection;
-import java.net.URLEncoder;
 import java.security.KeyFactory;
 import java.security.KeyStore;
-import java.security.Principal;
 import java.security.PrivateKey;
 import java.security.Signature;
 import java.security.cert.CertPath;
@@ -33,7 +27,6 @@ import java.security.cert.PKIXParameters;
 import java.security.cert.X509Certificate;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.util.ArrayList;
-import java.util.BitSet;
 
 import javax.crypto.Cipher;
 import javax.crypto.CipherOutputStream;
@@ -42,9 +35,6 @@ import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
 import javax.net.ssl.HttpsURLConnection;
 
-/**
- * Created by Erik Borgstrom on 2016-03-16.
- */
 public class UploadHandler2 {
 
     public UploadHandler2() {
@@ -149,7 +139,7 @@ public class UploadHandler2 {
 
     private X509Certificate getClientCert() throws Exception {
         CertificateFactory factory = CertificateFactory.getInstance("X.509");
-        File certFile = new File(Environment.getExternalStorageDirectory(), "client-phone2.crt");
+        File certFile = new File(Environment.getExternalStorageDirectory(), "client.crt");
         InputStream certIn = new BufferedInputStream(new FileInputStream(certFile));
         X509Certificate cert = (X509Certificate) factory.generateCertificate(certIn);
         return cert;
@@ -184,7 +174,7 @@ public class UploadHandler2 {
 
     private void encrypt(SecretKey secretKey, InputStream in, OutputStream out) throws Exception {
         Cipher aes = Cipher.getInstance("AES/CBC/PKCS5Padding");
-        IvParameterSpec ivSpec = new IvParameterSpec("bnss1337bnss1337".getBytes("ISO8859-1"));
+        IvParameterSpec ivSpec = new IvParameterSpec("4b2ff702585d9104".getBytes("ISO8859-1"));
         aes.init(Cipher.ENCRYPT_MODE, secretKey, ivSpec);
         CipherOutputStream cipherOut = new CipherOutputStream(out, aes);
         byte[] buff = new byte[512];
@@ -204,9 +194,9 @@ public class UploadHandler2 {
     }
 
     private PrivateKey getClientPrivateKey() throws Exception {
-        File file = new File(Environment.getExternalStorageDirectory(), "client-phone2.key");
+        File file = new File(Environment.getExternalStorageDirectory(), "client.key");
         BufferedInputStream in = new BufferedInputStream(new FileInputStream(file));
-        byte[] keyBytes = PemReader.getBytesFromPem(in);
+        byte[] keyBytes = PKCS8Reader.getBytesFromPem(in);
         in.close();
         PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(keyBytes);
         KeyFactory keyFactory = KeyFactory.getInstance("RSA");

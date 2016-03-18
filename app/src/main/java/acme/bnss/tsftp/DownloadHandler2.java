@@ -1,54 +1,36 @@
 package acme.bnss.tsftp;
 
 import android.os.Environment;
-import android.util.Base64;
-import android.util.Base64InputStream;
 import android.util.Log;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
-import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
-import java.net.URLDecoder;
-import java.nio.charset.Charset;
 import java.security.Signature;
 import java.security.cert.CertPath;
 import java.security.cert.CertPathValidator;
-import java.security.cert.CertPathValidatorResult;
 import java.security.cert.Certificate;
-import java.security.Key;
 import java.security.KeyFactory;
 import java.security.KeyStore;
 import java.security.PrivateKey;
 import java.security.cert.CertificateFactory;
-import java.security.cert.PKIXCertPathValidatorResult;
 import java.security.cert.PKIXParameters;
-import java.security.cert.TrustAnchor;
 import java.security.cert.X509Certificate;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Set;
 
 import javax.crypto.Cipher;
 import javax.crypto.CipherInputStream;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
-import javax.crypto.spec.SecretKeySpec;
 import javax.net.ssl.HttpsURLConnection;
 
-/**
- * Created by Erik Borgstrom on 2016-03-16.
- */
 public class DownloadHandler2 {
 
     private String message;
@@ -196,7 +178,7 @@ public class DownloadHandler2 {
 
     private void decrypt(SecretKey secretKey, InputStream in, OutputStream out) throws Exception {
         Cipher aes = Cipher.getInstance("AES/CBC/PKCS5Padding");
-        IvParameterSpec ivSpec = new IvParameterSpec("bnss1337bnss1337".getBytes("ISO8859-1"));
+        IvParameterSpec ivSpec = new IvParameterSpec("4b2ff702585d9104".getBytes("ISO8859-1"));
         aes.init(Cipher.DECRYPT_MODE, secretKey, ivSpec);
         CipherInputStream cipherIn = new CipherInputStream(in, aes);
         byte[] buff = new byte[512];
@@ -232,9 +214,9 @@ public class DownloadHandler2 {
     }
 
     private PrivateKey getClientPrivateKey() throws Exception {
-        File file = new File(Environment.getExternalStorageDirectory(), "client-phone2.key");
+        File file = new File(Environment.getExternalStorageDirectory(), "client.key");
         BufferedInputStream in = new BufferedInputStream(new FileInputStream(file));
-        byte[] keyBytes = PemReader.getBytesFromPem(in);
+        byte[] keyBytes = PKCS8Reader.getBytesFromPem(in);
         in.close();
         PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(keyBytes);
         KeyFactory keyFactory = KeyFactory.getInstance("RSA");
@@ -248,8 +230,10 @@ public class DownloadHandler2 {
         try {
             connection = HTTPSConnectionHandler.getConnectionToACMEWebServer(file);
             connection.setRequestMethod("POST");
-            connection.setDoInput(false);
             connection.connect();
+            if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
+                return false;
+            }
         } catch (Exception e) {
             return false;
         }

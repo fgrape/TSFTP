@@ -2,9 +2,6 @@ package acme.bnss.tsftp;
 
 import java.nio.charset.MalformedInputException;
 
-/**
- * Created by Erik Borgstrom on 2016-03-10.
- */
 public class TSFTPFileDescriptor {
 
     private String fileLink;

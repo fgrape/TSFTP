@@ -4,9 +4,6 @@ import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
-/**
- * Created by Erik Borgstrom on 2016-03-17.
- */
 public class HexInputStream extends FilterInputStream {
 
     public HexInputStream(InputStream in) {
